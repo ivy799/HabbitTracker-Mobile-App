@@ -47,7 +47,7 @@ private static final String SQL_CREATE_TABLE_HABIT_LOGS =
                         + "%s TEXT NOT NULL "
                         + "FOREIGN KEY(%s) REFERENCES %s(%s))",
                 HabitLogsDatabaseContract.table_name,
-                HabitLogsDatabaseContract.habitLogsColumns.ID,
+                HabitLogsDatabaseContract.habitLogsColumns._ID,
                 HabitLogsDatabaseContract.habitLogsColumns.HABIT_ID,
                 HabitLogsDatabaseContract.habitLogsColumns.LOG_DATE,
                 HabitLogsDatabaseContract.habitLogsColumns.STATUS,
