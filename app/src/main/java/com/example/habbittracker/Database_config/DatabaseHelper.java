@@ -44,7 +44,7 @@ private static final String SQL_CREATE_TABLE_HABIT_LOGS =
                         + "%S INTEGER PRIMARY KEY AUTOINCREMENT, "
                         + "%s INTEGER NOT NULL, "
                         + "%s TEXT NOT NULL, "
-                        + "%s TEXT NOT NULL "
+                        + "%s TEXT NOT NULL, "
                         + "FOREIGN KEY(%s) REFERENCES %s(%s))",
                 HabitLogsDatabaseContract.table_name,
                 HabitLogsDatabaseContract.habitLogsColumns._ID,
