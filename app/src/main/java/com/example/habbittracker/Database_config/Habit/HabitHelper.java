@@ -1,8 +1,10 @@
 package com.example.habbittracker.Database_config.Habit;
 
 import android.content.ContentValues;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
 
 import com.example.habbittracker.Database_config.DatabaseHelper;
 
@@ -12,15 +14,15 @@ public class HabitHelper {
     public static SQLiteDatabase sqLiteDatabase;
     private static volatile HabitHelper INSTANCE;
 
-    public HabitHelper(DatabaseHelper dbHelper) {
-        databaseHelper = dbHelper;
+    public HabitHelper(Context context) {
+        databaseHelper = new DatabaseHelper(context);
     }
 
-    public static HabitHelper getInstance(DatabaseHelper dbHelper) {
+    public static HabitHelper getInstance(Context context) {
         if (INSTANCE == null) {
-            synchronized (HabitHelper.class) {
+            synchronized (SQLiteOpenHelper.class) {
                 if (INSTANCE == null) {
-                    INSTANCE = new HabitHelper(dbHelper);
+                    INSTANCE = new HabitHelper(context);
                 }
             }
         }

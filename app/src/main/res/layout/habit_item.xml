@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="12dp">
+
+    <!-- Nama Habit -->
+    <TextView
+        android:id="@+id/tvHabitName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Habit Name"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Deskripsi Habit -->
+    <TextView
+        android:id="@+id/tvHabitDescription"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Habit Description"
+        android:textSize="14sp"
+        android:maxLines="2"
+        android:ellipsize="end"
+        app:layout_constraintTop_toBottomOf="@id/tvHabitName"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="4dp"/>
+
+    <!-- Kategori -->
+    <TextView
+        android:id="@+id/tvHabitCategory"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Category"
+        android:textSize="12sp"
+        android:textColor="#666666"
+        app:layout_constraintTop_toBottomOf="@id/tvHabitDescription"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="6dp"/>
+
+    <!-- Frekuensi -->
+    <TextView
+        android:id="@+id/tvHabitFrequency"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Frequency"
+        android:textSize="12sp"
+        android:textColor="#666666"
+        app:layout_constraintTop_toBottomOf="@id/tvHabitDescription"
+        app:layout_constraintStart_toEndOf="@id/tvHabitCategory"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="6dp"/>
+
+    <!-- Tanggal Mulai -->
+    <TextView
+        android:id="@+id/tvHabitStartDate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Start Date"
+        android:textSize="12sp"
+        android:textColor="#666666"
+        app:layout_constraintTop_toBottomOf="@id/tvHabitCategory"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="6dp"/>
+
+    <!-- Target Count -->
+    <TextView
+        android:id="@+id/tvHabitTarget"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Target: 10"
+        android:textSize="12sp"
+        app:layout_constraintTop_toBottomOf="@id/tvHabitStartDate"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="6dp"/>
+
+    <!-- Current Count -->
+    <TextView
+        android:id="@+id/tvHabitCurrent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Current: 3"
+        android:textSize="12sp"
+        app:layout_constraintTop_toBottomOf="@id/tvHabitStartDate"
+        app:layout_constraintStart_toEndOf="@id/tvHabitTarget"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="6dp"/>
+
+    <!-- Status Aktif -->
+    <TextView
+        android:id="@+id/tvHabitStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Active"
+        android:textSize="12sp"
+        android:textColor="#388E3C"
+        app:layout_constraintTop_toBottomOf="@id/tvHabitCurrent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="4dp"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -49,6 +49,10 @@ public class Habit implements Parcelable {
         }
     };
 
+    public Habit() {
+
+    }
+
     public int getId() {
         return id;
     }

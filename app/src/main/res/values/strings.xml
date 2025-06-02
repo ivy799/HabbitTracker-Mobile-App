@@ -1,3 +1,17 @@
 <resources>
     <string name="app_name">HabbitTracker</string>
+    <string-array name="status_options">
+        <item>Active</item>
+        <item>Inactive</item>
+    </string-array>
+    <string-array name="frequency_options">
+        <item>Daily</item>
+        <item>Weekly</item>
+        <item>Weekly</item>
+        <item>Monthly</item>
+    </string-array>
+    <string-array name="category_options">
+        <item>Olahraga</item>
+        <item>produktivitas</item>
+    </string-array>
 </resources>

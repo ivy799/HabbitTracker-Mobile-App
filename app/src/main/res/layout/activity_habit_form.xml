@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/main"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <!-- Nama Habit -->
+        <EditText
+            android:id="@+id/etHabitName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:hint="Nama Habit"
+            android:inputType="textPersonName"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Deskripsi Habit -->
+        <EditText
+            android:id="@+id/etHabitDescription"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:hint="Deskripsi"
+            android:inputType="textMultiLine"
+            android:minLines="2"
+            android:gravity="top|start"
+            app:layout_constraintTop_toBottomOf="@id/etHabitName"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="12dp"/>
+
+        <Spinner
+            android:id="@+id/spinnerHabitCategory"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@id/etHabitDescription"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="12dp"
+            />
+
+        <!-- Frekuensi -->
+        <Spinner
+            android:id="@+id/spinnerHabitFrequency"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@id/spinnerHabitCategory"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="12dp"/>
+
+        <!-- Tanggal Mulai -->
+        <EditText
+            android:id="@+id/etHabitStartDate"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:hint="Tanggal Mulai (yyyy-MM-dd)"
+            android:focusable="false"
+            android:clickable="true"
+            android:inputType="none"
+            app:layout_constraintTop_toBottomOf="@id/spinnerHabitFrequency"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="12dp"/>
+
+        <!-- Target Count -->
+        <EditText
+            android:id="@+id/etHabitTarget"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:hint="Target Count"
+            android:inputType="number"
+            app:layout_constraintTop_toBottomOf="@id/etHabitStartDate"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="12dp"/>
+
+        <!-- Status Spinner -->
+        <Spinner
+            android:id="@+id/spinnerHabitStatus"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@id/etHabitTarget"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="12dp"/>
+
+        <!-- Tombol Simpan -->
+        <Button
+            android:id="@+id/btnSaveHabit"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Simpan"
+            app:layout_constraintTop_toBottomOf="@id/spinnerHabitStatus"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Tombol Hapus -->
+        <Button
+            android:id="@+id/btnDeleteHabit"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Hapus Habit"
+            app:layout_constraintTop_toBottomOf="@id/btnSaveHabit"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>
