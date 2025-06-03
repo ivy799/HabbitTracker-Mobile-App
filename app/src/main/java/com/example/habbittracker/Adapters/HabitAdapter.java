@@ -3,10 +3,12 @@ package com.example.habbittracker.Adapters;
 import android.app.Activity;
 import android.content.ContentValues;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -65,6 +67,7 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
         final TextView tvHabitCurrent;
         final TextView tvHabitStatus;
         final Button btnFinishHabit, btnSkipHabit, btnDeactivateHabit;
+        final ProgressBar progressBar;
 
         public HabitViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -79,6 +82,7 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             this.btnFinishHabit = itemView.findViewById(R.id.btnFinishHabit);
             this.btnSkipHabit = itemView.findViewById(R.id.btnSkipHabit);
             this.btnDeactivateHabit = itemView.findViewById(R.id.btnDeactivateHabit);
+            this.progressBar = itemView.findViewById(R.id.progressBar);
 
         }
 
@@ -101,6 +105,14 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             if (habitLog != null) habitLog.close();
             btnFinishHabit.setEnabled(!sudahSelesaiHariIni && habit.getIs_active());
 
+            if (habit.getIs_active()) {
+                tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge);
+                tvHabitStatus.setText("Active");
+            } else {
+                tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge_inactive);
+                tvHabitStatus.setText("Inactive");
+            }
+
             btnFinishHabit.setOnClickListener(v -> {
                 Cursor c = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today);
                 boolean alreadyLogged = (c != null && c.moveToFirst());
@@ -113,57 +125,90 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                     values.put("status", 1);
                     HabitLogHelper.instance.insert(values);
 
+                    // Update object model dulu
                     habit.setCurrent_count(habit.getCurrent_count() + 1);
                     habit.setIs_active(habit.getCurrent_count() < habit.getTarget_count());
+
+                    // Buat ContentValues untuk update database
                     ContentValues habitValues = new ContentValues();
                     habitValues.put("current_count", habit.getCurrent_count());
                     habitValues.put("is_active", habit.getIs_active() ? 1 : 0);
 
+                    // Update database
                     HabitHelper.instance.update(String.valueOf(habit.getId()), habitValues);
+
+                    // LANGSUNG UPDATE UI DULU SEBELUM NOTIFY
+                    // 1. Update text count
+                    tvHabitCurrent.setText(String.valueOf(habit.getCurrent_count()));
+
+                    // 2. Update progress bar
+                    int progress = 0;
+                    if (habit.getTarget_count() > 0) {
+                        progress = (int) ((habit.getCurrent_count() * 100.0f) / habit.getTarget_count());
+                    }
+                    progressBar.setProgress(progress);
+
+                    // 3. Update status badge jika completed
+                    if (!habit.getIs_active()) {
+                        tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge_inactive);
+                        tvHabitStatus.setText("Inactive");
+                    }
+
+                    // 4. Disable button
                     btnFinishHabit.setEnabled(false);
 
-                    notifyItemChanged(getAdapterPosition());
+                    // JANGAN NOTIFY ITEM CHANGED - ini akan me-reset UI
+                    // notifyItemChanged(getAdapterPosition());
                 } else {
                     btnFinishHabit.setEnabled(false);
                 }
             });
             btnDeactivateHabit.setOnClickListener(v -> {
                 ContentValues values = new ContentValues();
+
                 if (habit.getIs_active()) {
                     // Nonaktifkan habit
                     values.put("is_active", 0);
-                    habit.setIs_active(false);
-
-                    // Hapus semua log habit ini!
-                    HabitLogHelper.instance.deleteByHabitId(String.valueOf(habit.getId()));
-
-                    // Reset count
                     values.put("current_count", 0);
+                    habit.setIs_active(false);
                     habit.setCurrent_count(0);
 
-                    // Disable tombol finish dan skip
+                    // Hapus semua log habit ini
+                    HabitLogHelper.instance.deleteByHabitId(String.valueOf(habit.getId()));
+
+                    // Update database SEBELUM update UI
+                    HabitHelper.instance.update(String.valueOf(habit.getId()), values);
+
+                    // LANGSUNG UPDATE UI
+                    tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge_inactive);
+                    tvHabitStatus.setText("Inactive");
+                    tvHabitCurrent.setText("0");
+                    progressBar.setProgress(0);
+
+                    // Disable tombol
                     btnFinishHabit.setEnabled(false);
                     btnSkipHabit.setEnabled(false);
                 } else {
-                    // Aktifkan ulang habit, reset count ke 0
+                    // Aktifkan ulang
                     values.put("is_active", 1);
                     values.put("current_count", 0);
                     habit.setIs_active(true);
                     habit.setCurrent_count(0);
 
-                    // Enable tombol finish dan skip
+                    // Update database SEBELUM update UI
+                    HabitHelper.instance.update(String.valueOf(habit.getId()), values);
+
+                    // LANGSUNG UPDATE UI
+                    tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge);
+                    tvHabitStatus.setText("Active");
+                    tvHabitCurrent.setText("0");
+                    progressBar.setProgress(0);
+
+                    // Enable tombol
                     btnFinishHabit.setEnabled(true);
                     btnSkipHabit.setEnabled(true);
                 }
 
-                // Update ke database
-                HabitHelper.instance.update(String.valueOf(habit.getId()), values);
-
-                // Update tampilan count
-                tvHabitCurrent.setText(String.valueOf(habit.getCurrent_count()));
-
-                // Update status tampilan
-                tvHabitStatus.setText(habit.getIs_active() ? "Active" : "Inactive");
             });
 
         }
