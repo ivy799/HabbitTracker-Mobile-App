@@ -12,21 +12,21 @@ public class HabitHelper {
     public static final String TABLE_NAME = HabitDatabaseContract.table_name;
     public static DatabaseHelper databaseHelper;
     public static SQLiteDatabase sqLiteDatabase;
-    private static volatile HabitHelper INSTANCE;
+    public static volatile HabitHelper instance;
 
     public HabitHelper(Context context) {
         databaseHelper = new DatabaseHelper(context);
     }
 
     public static HabitHelper getInstance(Context context) {
-        if (INSTANCE == null) {
+        if (instance == null) {
             synchronized (SQLiteOpenHelper.class) {
-                if (INSTANCE == null) {
-                    INSTANCE = new HabitHelper(context);
+                if (instance == null) {
+                    instance = new HabitHelper(context);
                 }
             }
         }
-        return INSTANCE;
+        return instance;
     }
 
     public void open(){

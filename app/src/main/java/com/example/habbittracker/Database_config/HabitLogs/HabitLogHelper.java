@@ -12,6 +12,7 @@ public class HabitLogHelper {
     public static SQLiteDatabase sqLiteDatabase;
     public static volatile HabitLogHelper instance;
 
+
     public HabitLogHelper(DatabaseHelper dbHelper) {
         databaseHelper = dbHelper;
     }
@@ -62,7 +63,7 @@ public class HabitLogHelper {
         );
     }
 
-    public Cursor queryByHabitId(String habitId) {
+    public static Cursor queryByHabitId(String habitId) {
         return sqLiteDatabase.query(
                 TABLE_NAME,
                 null,
@@ -88,5 +89,18 @@ public class HabitLogHelper {
         return sqLiteDatabase.delete(TABLE_NAME,
                 HabitLogsDatabaseContract.habitLogsColumns._ID + " = ?",
                 new String[]{id});
+    }
+
+    public Cursor queryByHabitIdAndDate(int habitId, String date) {
+        return sqLiteDatabase.query(
+                TABLE_NAME,
+                null,
+                HabitLogsDatabaseContract.habitLogsColumns.HABIT_ID + " = ? AND " +
+                        HabitLogsDatabaseContract.habitLogsColumns.LOG_DATE + " = ?",
+                new String[]{String.valueOf(habitId), date},
+                null,
+                null,
+                HabitLogsDatabaseContract.habitLogsColumns._ID + " ASC"
+        );
     }
 }

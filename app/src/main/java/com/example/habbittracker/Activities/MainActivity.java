@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.ContactsContract;
+import android.widget.Button;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -17,8 +18,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.habbittracker.Adapters.HabitAdapter;
+import com.example.habbittracker.Database_config.DatabaseHelper;
 import com.example.habbittracker.Database_config.Habit.HabitHelper;
 import com.example.habbittracker.Database_config.Habit.HabitMappingHelper;
+import com.example.habbittracker.Database_config.HabitLogs.HabitLogHelper;
 import com.example.habbittracker.Models.Habit;
 import com.example.habbittracker.R;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
@@ -55,8 +58,12 @@ public class MainActivity extends AppCompatActivity {
             getSupportActionBar().setTitle("Habit Tracker");
         }
 
+        DatabaseHelper dbHelper = new DatabaseHelper(this);
+        HabitLogHelper.getInstance(dbHelper).open();
+
         rvHabit = findViewById(R.id.rv_habits);
         fabAdd = findViewById(R.id.fab_add);
+
 
         rvHabit.setLayoutManager(new LinearLayoutManager(this));
         adapter = new HabitAdapter(this);
@@ -100,13 +107,11 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
         habitHelper.close();
     }
-
     private static class LoadHabitsAsync {
         private final WeakReference<Context> weakContext;
         private final WeakReference<LoadHabitsCallback> weakCallback;
