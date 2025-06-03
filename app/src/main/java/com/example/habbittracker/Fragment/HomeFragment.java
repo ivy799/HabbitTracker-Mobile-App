@@ -42,7 +42,6 @@ public class HomeFragment extends Fragment {
     private HabitHelper habitHelper;
 
     public HomeFragment() {
-        // Required empty public constructor
     }
 
     public static HomeFragment newInstance() {
@@ -83,22 +82,18 @@ public class HomeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // Setup views
         rvHabit = view.findViewById(R.id.rv_habits);
         fabAdd = view.findViewById(R.id.fab_add);
 
-        // Setup RecyclerView
         rvHabit.setLayoutManager(new LinearLayoutManager(requireContext()));
         adapter = new HabitAdapter(requireActivity());
         rvHabit.setAdapter(adapter);
 
-        // Setup FAB
         fabAdd.setOnClickListener(v -> {
             Intent intent = new Intent(requireActivity(), HabitFormActivity.class);
             startActivityForResult(intent, REQUEST_ADD);
         });
 
-        // Load data
         loadData();
     }
 
@@ -132,10 +127,8 @@ public class HomeFragment extends Fragment {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        //habitHelper.close();
     }
 
-    // Inner class for async loading
     private static class LoadHabitsAsync {
         private final WeakReference<Context> weakContext;
         private final WeakReference<LoadHabitsCallback> weakCallback;

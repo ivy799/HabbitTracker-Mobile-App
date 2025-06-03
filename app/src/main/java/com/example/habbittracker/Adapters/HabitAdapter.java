@@ -3,7 +3,6 @@ package com.example.habbittracker.Adapters;
 import android.app.Activity;
 import android.content.ContentValues;
 import android.database.Cursor;
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,13 +17,13 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.habbittracker.Database_config.Habit.HabitHelper;
 import com.example.habbittracker.Database_config.HabitLogs.HabitLogHelper;
 import com.example.habbittracker.Models.Habit;
-import com.example.habbittracker.Models.HabitLog;
 import com.example.habbittracker.R;
-import java.lang.reflect.Array;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHolder> {
     private final ArrayList<Habit> listHabits = new ArrayList<>();
@@ -98,144 +97,123 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             tvHabitCurrent.setText(String.valueOf(habit.getCurrent_count()));
             tvHabitStatus.setText(habit.getIs_active() ? "Active" : "Inactive");
 
+            // Hitung progress
+            int progress = 0;
+            if (habit.getTarget_count() > 0) {
+                progress = (int) ((habit.getCurrent_count() * 100.0f) / habit.getTarget_count());
+            }
+            progressBar.setProgress(progress);
+
             String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
             boolean sudahSelesaiHariIni = false;
+
+
             Cursor habitLog = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today);
             if (habitLog != null && habitLog.moveToFirst()) {
-                sudahSelesaiHariIni = true;
+                int statusColumnIndex = habitLog.getColumnIndex("status");
+                if (statusColumnIndex != -1) {
+                    int status = habitLog.getInt(statusColumnIndex);
+                    sudahSelesaiHariIni = (status == 1 || status == 2);
+                }
             }
-            if (habitLog != null) habitLog.close();
-            btnFinishHabit.setEnabled(!sudahSelesaiHariIni && habit.getIs_active());
 
+            // Set background status badge
             if (habit.getIs_active()) {
                 tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge);
-                tvHabitStatus.setText("Active");
             } else {
                 tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge_inactive);
-                tvHabitStatus.setText("Inactive");
             }
 
+            // Atur state tombol
+            boolean canCompleteToday = habit.getIs_active() && !sudahSelesaiHariIni;
+            btnFinishHabit.setEnabled(canCompleteToday);
+            btnSkipHabit.setEnabled(canCompleteToday);
+            btnDeactivateHabit.setText(habit.getIs_active() ? "Disable" : "Activate");
+
+            // Tombol Finish
             btnFinishHabit.setOnClickListener(v -> {
-                Cursor c = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today);
-                boolean alreadyLogged = (c != null && c.moveToFirst());
-                if (c != null) c.close();
+                try (Cursor c = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today)) {
+                    boolean alreadyLogged = (c != null && c.moveToFirst());
+                    if (!alreadyLogged) {
+                        ContentValues values = new ContentValues();
+                        values.put("habit_id", habit.getId());
+                        values.put("log_date", today);
+                        values.put("status", 1);
+                        HabitLogHelper.instance.insert(values);
 
-                if (!alreadyLogged) {
-                    ContentValues values = new ContentValues();
-                    values.put("habit_id", habit.getId());
-                    values.put("log_date", today);
-                    values.put("status", 1);
-                    HabitLogHelper.instance.insert(values);
+                        // Update model
+                        habit.setCurrent_count(habit.getCurrent_count() + 1);
+                        habit.setIs_active(habit.getCurrent_count() < habit.getTarget_count());
 
-                    // Update object model dulu
-                    habit.setCurrent_count(habit.getCurrent_count() + 1);
-                    habit.setIs_active(habit.getCurrent_count() < habit.getTarget_count());
+                        ContentValues habitValues = new ContentValues();
+                        habitValues.put("current_count", habit.getCurrent_count());
+                        habitValues.put("is_active", habit.getIs_active() ? 1 : 0);
+                        HabitHelper.instance.update(String.valueOf(habit.getId()), habitValues);
 
-                    // Buat ContentValues untuk update database
-                    ContentValues habitValues = new ContentValues();
-                    habitValues.put("current_count", habit.getCurrent_count());
-                    habitValues.put("is_active", habit.getIs_active() ? 1 : 0);
+                        // Update UI
+                        tvHabitCurrent.setText(String.valueOf(habit.getCurrent_count()));
+                        int newProgress = (int) ((habit.getCurrent_count() * 100.0f) / habit.getTarget_count());
+                        progressBar.setProgress(newProgress);
 
-                    // Update database
-                    HabitHelper.instance.update(String.valueOf(habit.getId()), habitValues);
+                        if (!habit.getIs_active()) {
+                            tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge_inactive);
+                            tvHabitStatus.setText("Inactive");
+                        }
 
-                    // LANGSUNG UPDATE UI DULU SEBELUM NOTIFY
-                    // 1. Update text count
-                    tvHabitCurrent.setText(String.valueOf(habit.getCurrent_count()));
-
-                    // 2. Update progress bar
-                    int progress = 0;
-                    if (habit.getTarget_count() > 0) {
-                        progress = (int) ((habit.getCurrent_count() * 100.0f) / habit.getTarget_count());
+                        btnFinishHabit.setEnabled(false);
+                        btnSkipHabit.setEnabled(false);
                     }
-                    progressBar.setProgress(progress);
-
-                    // 3. Update status badge jika completed
-                    if (!habit.getIs_active()) {
-                        tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge_inactive);
-                        tvHabitStatus.setText("Inactive");
-                    }
-
-                    // 4. Disable button
-                    btnFinishHabit.setEnabled(false);
-
-                    // JANGAN NOTIFY ITEM CHANGED - ini akan me-reset UI
-                    // notifyItemChanged(getAdapterPosition());
-                } else {
-                    btnFinishHabit.setEnabled(false);
                 }
             });
+
+            // Tombol Deactivate / Activate
             btnDeactivateHabit.setOnClickListener(v -> {
                 ContentValues values = new ContentValues();
+                boolean isActivating = !habit.getIs_active();
 
-                if (habit.getIs_active()) {
-                    // Nonaktifkan habit
-                    values.put("is_active", 0);
-                    values.put("current_count", 0);
-                    habit.setIs_active(false);
-                    habit.setCurrent_count(0);
+                values.put("is_active", isActivating ? 1 : 0);
+                values.put("current_count", 0);
+                habit.setIs_active(isActivating);
+                habit.setCurrent_count(0);
+                HabitHelper.instance.update(String.valueOf(habit.getId()), values);
 
-                    // Hapus semua log habit ini
+                if (!isActivating) {
                     HabitLogHelper.instance.deleteByHabitId(String.valueOf(habit.getId()));
-
-                    // Update database SEBELUM update UI
-                    HabitHelper.instance.update(String.valueOf(habit.getId()), values);
-
-                    // LANGSUNG UPDATE UI
-                    tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge_inactive);
-                    tvHabitStatus.setText("Inactive");
-                    tvHabitCurrent.setText("0");
-                    progressBar.setProgress(0);
-
-                    // Disable tombol
-                    btnFinishHabit.setEnabled(false);
-                    btnSkipHabit.setEnabled(false);
-                } else {
-                    // Aktifkan ulang
-                    values.put("is_active", 1);
-                    values.put("current_count", 0);
-                    habit.setIs_active(true);
-                    habit.setCurrent_count(0);
-
-                    // Update database SEBELUM update UI
-                    HabitHelper.instance.update(String.valueOf(habit.getId()), values);
-
-                    // LANGSUNG UPDATE UI
-                    tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge);
-                    tvHabitStatus.setText("Active");
-                    tvHabitCurrent.setText("0");
-                    progressBar.setProgress(0);
-
-                    // Enable tombol
-                    btnFinishHabit.setEnabled(true);
-                    btnSkipHabit.setEnabled(true);
                 }
 
+                // Update UI
+                tvHabitStatus.setBackgroundResource(isActivating ? R.drawable.habit_status_badge : R.drawable.habit_status_badge_inactive);
+                tvHabitStatus.setText(isActivating ? "Active" : "Inactive");
+                tvHabitCurrent.setText("0");
+                progressBar.setProgress(0);
+                btnFinishHabit.setEnabled(isActivating);
+                btnSkipHabit.setEnabled(isActivating);
+                btnDeactivateHabit.setText(isActivating ? "Disable" : "Activate");
             });
+
+            // Tombol Skip
             btnSkipHabit.setOnClickListener(v -> {
+                try (Cursor c = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today)) {
+                    boolean alreadyLogged = (c != null && c.moveToFirst());
+                    if (!alreadyLogged) {
+                        ContentValues values = new ContentValues();
+                        values.put("habit_id", habit.getId());
+                        values.put("log_date", today);
+                        values.put("status", 2);
+                        HabitLogHelper.instance.insert(values);
 
-                Cursor c = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today);
-                boolean alreadyLogged = (c != null && c.moveToFirst());
-                if (c != null) c.close();
+                        btnFinishHabit.setEnabled(false);
+                        btnSkipHabit.setEnabled(false);
 
-                if (!alreadyLogged) {
-                    ContentValues values = new ContentValues();
-                    values.put("habit_id", habit.getId());
-                    values.put("log_date", today);
-                    values.put("status", 2);
-                    HabitLogHelper.instance.insert(values);
-
-                    btnFinishHabit.setEnabled(false);
-                    btnSkipHabit.setEnabled(false);
-
-                    Toast.makeText(itemView.getContext(),
-                            "Habit skipped for today. Your streak is preserved!",
-                            Toast.LENGTH_SHORT).show();
-                } else {
-                    btnSkipHabit.setEnabled(false);
-                    Toast.makeText(itemView.getContext(),
-                            "You've already logged this habit today",
-                            Toast.LENGTH_SHORT).show();
+                        Toast.makeText(itemView.getContext(),
+                                "Habit skipped for today. Your streak is preserved!",
+                                Toast.LENGTH_SHORT).show();
+                    } else {
+                        btnSkipHabit.setEnabled(false);
+                        Toast.makeText(itemView.getContext(),
+                                "You've already logged this habit today",
+                                Toast.LENGTH_SHORT).show();
+                    }
                 }
             });
         }

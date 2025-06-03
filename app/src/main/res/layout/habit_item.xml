@@ -96,7 +96,7 @@
                     android:layout_height="12dp"
                     android:progressDrawable="@drawable/habit_progress_bar"
                     android:max="100"
-                    android:progress="30" />
+                    android:progress="0" />
 
                 <!-- Progress Text -->
                 <LinearLayout
