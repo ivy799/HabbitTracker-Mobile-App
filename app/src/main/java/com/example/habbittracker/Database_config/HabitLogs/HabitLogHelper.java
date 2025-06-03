@@ -91,6 +91,14 @@ public class HabitLogHelper {
                 new String[]{id});
     }
 
+    public long deleteByHabitId(String habitId) {
+        return sqLiteDatabase.delete(
+                TABLE_NAME,
+                HabitLogsDatabaseContract.habitLogsColumns.HABIT_ID + " = ?",
+                new String[]{habitId}
+        );
+    }
+
     public Cursor queryByHabitIdAndDate(int habitId, String date) {
         return sqLiteDatabase.query(
                 TABLE_NAME,

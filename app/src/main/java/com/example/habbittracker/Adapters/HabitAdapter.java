@@ -107,14 +107,12 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 if (c != null) c.close();
 
                 if (!alreadyLogged) {
-                    // Insert log
                     ContentValues values = new ContentValues();
                     values.put("habit_id", habit.getId());
-                    values.put("log_date", today); // hanya tanggal!
+                    values.put("log_date", today);
                     values.put("status", 1);
                     HabitLogHelper.instance.insert(values);
 
-                    // Update habit
                     habit.setCurrent_count(habit.getCurrent_count() + 1);
                     habit.setIs_active(habit.getCurrent_count() < habit.getTarget_count());
                     ContentValues habitValues = new ContentValues();
@@ -122,14 +120,50 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                     habitValues.put("is_active", habit.getIs_active() ? 1 : 0);
 
                     HabitHelper.instance.update(String.valueOf(habit.getId()), habitValues);
-
-                    // Nonaktifkan tombol
                     btnFinishHabit.setEnabled(false);
 
                     notifyItemChanged(getAdapterPosition());
                 } else {
-                    btnFinishHabit.setEnabled(false); // Safety
+                    btnFinishHabit.setEnabled(false);
                 }
+            });
+            btnDeactivateHabit.setOnClickListener(v -> {
+                ContentValues values = new ContentValues();
+                if (habit.getIs_active()) {
+                    // Nonaktifkan habit
+                    values.put("is_active", 0);
+                    habit.setIs_active(false);
+
+                    // Hapus semua log habit ini!
+                    HabitLogHelper.instance.deleteByHabitId(String.valueOf(habit.getId()));
+
+                    // Reset count
+                    values.put("current_count", 0);
+                    habit.setCurrent_count(0);
+
+                    // Disable tombol finish dan skip
+                    btnFinishHabit.setEnabled(false);
+                    btnSkipHabit.setEnabled(false);
+                } else {
+                    // Aktifkan ulang habit, reset count ke 0
+                    values.put("is_active", 1);
+                    values.put("current_count", 0);
+                    habit.setIs_active(true);
+                    habit.setCurrent_count(0);
+
+                    // Enable tombol finish dan skip
+                    btnFinishHabit.setEnabled(true);
+                    btnSkipHabit.setEnabled(true);
+                }
+
+                // Update ke database
+                HabitHelper.instance.update(String.valueOf(habit.getId()), values);
+
+                // Update tampilan count
+                tvHabitCurrent.setText(String.valueOf(habit.getCurrent_count()));
+
+                // Update status tampilan
+                tvHabitStatus.setText(habit.getIs_active() ? "Active" : "Inactive");
             });
 
         }
