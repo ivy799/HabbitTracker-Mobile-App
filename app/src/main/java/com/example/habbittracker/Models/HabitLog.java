@@ -8,9 +8,9 @@ import java.util.Date;
 public class HabitLog implements Parcelable {
     private int id, habit_id;
     private Date log_date;
-    private boolean status;
+    private int status;
 
-    public HabitLog(int id, int habit_id, Date log_date, boolean status) {
+    public HabitLog(int id, int habit_id, Date log_date, int status) {
         this.id = id;
         this.habit_id = habit_id;
         this.log_date = log_date;
@@ -20,14 +20,14 @@ public class HabitLog implements Parcelable {
     protected HabitLog(Parcel in) {
         id = in.readInt();
         habit_id = in.readInt();
-        status = in.readByte() != 0;
+        status = in.readInt();
     }
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeInt(id);
         dest.writeInt(habit_id);
-        dest.writeByte((byte) (status ? 1 : 0));
+        dest.writeInt(status);
     }
 
     @Override
@@ -71,11 +71,11 @@ public class HabitLog implements Parcelable {
         this.log_date = log_date;
     }
 
-    public boolean isStatus() {
+    public int isStatus() {
         return status;
     }
 
-    public void setStatus(boolean status) {
+    public void setStatus(int status) {
         this.status = status;
     }
 }

@@ -10,6 +10,8 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -210,7 +212,32 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 }
 
             });
+            btnSkipHabit.setOnClickListener(v -> {
 
+                Cursor c = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today);
+                boolean alreadyLogged = (c != null && c.moveToFirst());
+                if (c != null) c.close();
+
+                if (!alreadyLogged) {
+                    ContentValues values = new ContentValues();
+                    values.put("habit_id", habit.getId());
+                    values.put("log_date", today);
+                    values.put("status", 2);
+                    HabitLogHelper.instance.insert(values);
+
+                    btnFinishHabit.setEnabled(false);
+                    btnSkipHabit.setEnabled(false);
+
+                    Toast.makeText(itemView.getContext(),
+                            "Habit skipped for today. Your streak is preserved!",
+                            Toast.LENGTH_SHORT).show();
+                } else {
+                    btnSkipHabit.setEnabled(false);
+                    Toast.makeText(itemView.getContext(),
+                            "You've already logged this habit today",
+                            Toast.LENGTH_SHORT).show();
+                }
+            });
         }
     }
 }

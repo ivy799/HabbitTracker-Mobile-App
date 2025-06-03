@@ -19,7 +19,7 @@ public class HabitLogsMappingHelper {
                     id,
                     habitId,
                     date != null ? java.sql.Date.valueOf(date) : null, // Convert String to Date
-                    status != null && status.equals("1") // Convert String to boolean
+                    status != null ? Integer.parseInt(status) : 0 // Convert String to int
             ));
         }
         return habitLogs;
