@@ -6,7 +6,6 @@ public class HabitDatabaseContract {
     public static String table_name = "habits";
 
     public static final class habitColumns implements BaseColumns {
-        public static String ID = "id";
         public static String TARGET_COUNT = "target_count";
         public static String CURRENT_COUNT = "current_count";
         public static String NAME = "name";

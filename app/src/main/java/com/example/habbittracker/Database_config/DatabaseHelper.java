@@ -2,13 +2,14 @@ package com.example.habbittracker.Database_config;
 
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.provider.BaseColumns;
 
 import com.example.habbittracker.Database_config.Habit.HabitDatabaseContract;
 import com.example.habbittracker.Database_config.HabitLogs.HabitLogsDatabaseContract;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
     public static String DATABASE_NAME = "habitTracker.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 5;
 
     public DatabaseHelper(android.content.Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -16,8 +17,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
 private static final String SQL_CREATE_TABLE_HABIT =
         String.format(
-                "CREATE TABLE %S ("
-                        + "%S INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "CREATE TABLE %s ("
+                        + "%s INTEGER PRIMARY KEY AUTOINCREMENT, "
                         + "%s TEXT NOT NULL, "
                         + "%s TEXT NOT NULL, "
                         + "%s TEXT NOT NULL, "
@@ -25,9 +26,9 @@ private static final String SQL_CREATE_TABLE_HABIT =
                         + "%s TEXT NOT NULL, "
                         + "%s TEXT NOT NULL, "
                         + "%s INTEGER NOT NULL, "
-                        + "%s INTEGER NOT NULL) ",
+                        + "%s INTEGER NOT NULL)",
                 HabitDatabaseContract.table_name,
-                HabitDatabaseContract.habitColumns._ID,
+                BaseColumns._ID,
                 HabitDatabaseContract.habitColumns.NAME,
                 HabitDatabaseContract.habitColumns.DESCRIPTION,
                 HabitDatabaseContract.habitColumns.CATEGORY,
