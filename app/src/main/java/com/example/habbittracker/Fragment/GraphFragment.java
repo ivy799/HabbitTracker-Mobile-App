@@ -171,7 +171,7 @@ public class GraphFragment extends Fragment {
 
                     // Debug: Print all logs
                     for (HabitLog log : recentLogs) {
-                        Log.d(TAG, "Log: Date=" + log.getLog_date() + ", Status=" + log.isStatus() + ", HabitId=" + log.getHabit_id());
+                        Log.d(TAG, "Log: Date=" + log.getLog_date() + ", Status=" + log.getStatus() + ", HabitId=" + log.getHabit_id());
                     }
                 } else {
                     Log.w(TAG, "Recent logs cursor is null");
@@ -412,7 +412,7 @@ public class GraphFragment extends Fragment {
         for (HabitLog log : recentLogs) {
             try {
                 String logDate = String.valueOf(log.getLog_date());
-                int status = log.isStatus();
+                int status = log.getStatus();
 
                 Log.d(TAG, "Checking log - Date: " + logDate + ", Status: " + status);
 

@@ -70,13 +70,13 @@ public class HabitHelper {
         );
     }
 
-    public Cursor search(String keyword) {
-        ensureOpen();
+    public Cursor search(int id) {
+        ensureOpen(); // Pastikan database sudah terbuka
         return sqLiteDatabase.query(
                 TABLE_NAME,
                 null,
-                HabitDatabaseContract.habitColumns.NAME + " LIKE ?",
-                new String[]{"%" + keyword + "%"},
+                HabitDatabaseContract.habitColumns._ID + " = ?", // Cari berdasarkan ID habit
+                new String[]{String.valueOf(id)},
                 null,
                 null,
                 HabitDatabaseContract.habitColumns._ID + " ASC"

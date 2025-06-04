@@ -70,11 +70,10 @@ public class RecentActivityAdapter extends RecyclerView.Adapter<RecentActivityAd
         }
 
         void bind(HabitLog log, Context context) {
-            // Get habit name from habit ID
             String habitName = getHabitNameById(log.getHabit_id(), context);
             tvHabitName.setText(habitName);
 
-            SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
 
             try {
                 String dateString = String.valueOf(log.getLog_date()); // misalnya "04-06-2025"
@@ -86,21 +85,20 @@ public class RecentActivityAdapter extends RecyclerView.Adapter<RecentActivityAd
                 tvDate.setText("Format tanggal salah!");
             }
 
-            // Set status with proper icons and colors
-            if (log.isStatus() == 1) {
-                // Completed
+            System.out.println("Log Status: " + log.getStatus());
+
+
+            if (log.getStatus() == 1) {
                 tvStatus.setText("Completed");
                 tvStatus.setTextColor(ContextCompat.getColor(context, R.color.success_color));
                 ivIcon.setImageResource(android.R.drawable.ic_media_play); // Using built-in icon as fallback
                 ivIcon.setColorFilter(ContextCompat.getColor(context, R.color.success_color));
-            } else if (log.isStatus() == 2) {
-                // Skipped
+            } else if (log.getStatus() == 2) {
                 tvStatus.setText("Skipped");
                 tvStatus.setTextColor(ContextCompat.getColor(context, R.color.warning_color));
                 ivIcon.setImageResource(android.R.drawable.ic_media_pause); // Using built-in icon as fallback
                 ivIcon.setColorFilter(ContextCompat.getColor(context, R.color.warning_color));
             } else {
-                // Unknown status
                 tvStatus.setText("Unknown");
                 tvStatus.setTextColor(ContextCompat.getColor(context, R.color.text_secondary));
                 ivIcon.setImageResource(android.R.drawable.ic_dialog_info);
@@ -113,7 +111,7 @@ public class RecentActivityAdapter extends RecyclerView.Adapter<RecentActivityAd
                 HabitHelper habitHelper = HabitHelper.getInstance(context);
                 habitHelper.open();
 
-                Cursor cursor = habitHelper.search(String.valueOf(habitId));
+                Cursor cursor = habitHelper.search(habitId);
                 if (cursor != null && cursor.moveToFirst()) {
                     int nameIndex = cursor.getColumnIndex("name");
                     if (nameIndex != -1) {

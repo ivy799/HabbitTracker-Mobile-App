@@ -75,7 +75,7 @@ public class HabitLog implements Parcelable {
         this.log_date = log_date;
     }
 
-    public int isStatus() {
+    public int getStatus() {
         return status;
     }
 
