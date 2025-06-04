@@ -23,6 +23,10 @@ public class HabitLog implements Parcelable {
         status = in.readInt();
     }
 
+    public HabitLog() {
+
+    }
+
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeInt(id);

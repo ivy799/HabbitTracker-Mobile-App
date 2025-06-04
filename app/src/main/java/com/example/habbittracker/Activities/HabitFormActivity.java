@@ -6,9 +6,9 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.Spinner;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -40,7 +40,8 @@ public class HabitFormActivity extends AppCompatActivity {
             etHabitStartDate,
             etHabitTarget;
 
-    private Spinner spHabitFrequency, spHabitStatus, spHabitCategory;
+    // Changed from Spinner to AutoCompleteTextView
+    private AutoCompleteTextView spHabitFrequency, spHabitStatus, spHabitCategory;
 
     private Habit habit;
     private HabitHelper habitHelper;
@@ -72,19 +73,20 @@ public class HabitFormActivity extends AppCompatActivity {
         habitHelper = HabitHelper.getInstance(getApplicationContext());
         habitHelper.open();
 
-        ArrayAdapter<CharSequence> freqAdapter = ArrayAdapter.createFromResource(
-                this, R.array.frequency_options, android.R.layout.simple_spinner_item);
-        freqAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Updated adapter setup for AutoCompleteTextView
+        String[] frequencyOptions = getResources().getStringArray(R.array.frequency_options);
+        ArrayAdapter<String> freqAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, frequencyOptions);
         spHabitFrequency.setAdapter(freqAdapter);
 
-        ArrayAdapter<CharSequence> statusAdapter = ArrayAdapter.createFromResource(
-                this, R.array.status_options, android.R.layout.simple_spinner_item);
-        statusAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        String[] statusOptions = getResources().getStringArray(R.array.status_options);
+        ArrayAdapter<String> statusAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, statusOptions);
         spHabitStatus.setAdapter(statusAdapter);
 
-        ArrayAdapter<CharSequence> categoryAdapter = ArrayAdapter.createFromResource(
-                this, R.array.category_options, android.R.layout.simple_spinner_item);
-        categoryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        String[] categoryOptions = getResources().getStringArray(R.array.category_options);
+        ArrayAdapter<String> categoryAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, categoryOptions);
         spHabitCategory.setAdapter(categoryAdapter);
 
         etHabitStartDate.setOnClickListener(v -> showDatePickerDialog());
@@ -105,11 +107,13 @@ public class HabitFormActivity extends AppCompatActivity {
             if (habit != null){
                 etHabitName.setText(habit.getName());
                 etHabitDescription.setText(habit.getDescription());
-                spHabitCategory.setSelection(((ArrayAdapter<String>) spHabitCategory.getAdapter()).getPosition(habit.getCategory()));
+
+                // Updated method for setting text in AutoCompleteTextView
+                spHabitCategory.setText(habit.getCategory(), false);
                 etHabitStartDate.setText(habit.getStart_date().toString());
                 etHabitTarget.setText(String.valueOf(habit.getTarget_count()));
-                spHabitFrequency.setSelection(((ArrayAdapter<String>) spHabitFrequency.getAdapter()).getPosition(habit.getFrequency()));
-                spHabitStatus.setSelection(((ArrayAdapter<String>) spHabitStatus.getAdapter()).getPosition(habit.getIs_active() ? "Active" : "Inactive"));
+                spHabitFrequency.setText(habit.getFrequency(), false);
+                spHabitStatus.setText(habit.getIs_active() ? "Active" : "Inactive", false);
             }
             btnDelete.setVisibility(View.VISIBLE);
         } else {
@@ -137,11 +141,13 @@ public class HabitFormActivity extends AppCompatActivity {
     private void saveHabit() throws ParseException {
         String name = etHabitName.getText().toString().trim();
         String description = etHabitDescription.getText().toString().trim();
-        String category = spHabitCategory.getSelectedItem().toString();
+
+        // Updated method for getting text from AutoCompleteTextView
+        String category = spHabitCategory.getText().toString();
         String startDate = etHabitStartDate.getText().toString().trim();
         int targetCount = Integer.parseInt(etHabitTarget.getText().toString().trim());
-        String frequency = spHabitFrequency.getSelectedItem().toString();
-        boolean isActive = spHabitStatus.getSelectedItem().toString().equals("Active");
+        String frequency = spHabitFrequency.getText().toString();
+        boolean isActive = spHabitStatus.getText().toString().equals("Active");
 
         habit.setName(name);
         habit.setDescription(description);
@@ -170,6 +176,7 @@ public class HabitFormActivity extends AppCompatActivity {
             long result = habitHelper.update(String.valueOf(habit.getId()), values);
             if (result > 0){
                 setResult(RESULT_UPDATE, intent);
+                finish();
             } else {
                 setResult(RESULT_CANCELED);
             }
@@ -178,12 +185,12 @@ public class HabitFormActivity extends AppCompatActivity {
             if (result > 0){
                 habit.setId((int) result);
                 setResult(RESULT_ADD, intent);
+                finish();
             } else {
                 setResult(RESULT_CANCELED);
                 System.out.println("data tidak masuk");
             }
         }
-
     }
 
     private void deleteHabit(){
@@ -200,6 +207,7 @@ public class HabitFormActivity extends AppCompatActivity {
         }
     }
 
+    @Override
     public boolean onOptionsItemSelected(android.view.MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
             finish();

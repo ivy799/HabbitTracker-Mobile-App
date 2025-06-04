@@ -111,4 +111,41 @@ public class HabitLogHelper {
                 HabitLogsDatabaseContract.habitLogsColumns._ID + " ASC"
         );
     }
+
+    // Tambahkan method ini ke HabitLogHelper.java
+    public Cursor queryRecentLogs(String fromDate) {
+        return sqLiteDatabase.query(
+                TABLE_NAME,
+                null,
+                HabitLogsDatabaseContract.habitLogsColumns.LOG_DATE + " >= ?",
+                new String[]{fromDate},
+                null,
+                null,
+                HabitLogsDatabaseContract.habitLogsColumns.LOG_DATE + " DESC"
+        );
+    }
+
+    public Cursor queryByDateRange(String startDate, String endDate) {
+        return sqLiteDatabase.query(
+                TABLE_NAME,
+                null,
+                HabitLogsDatabaseContract.habitLogsColumns.LOG_DATE + " BETWEEN ? AND ?",
+                new String[]{startDate, endDate},
+                null,
+                null,
+                HabitLogsDatabaseContract.habitLogsColumns.LOG_DATE + " DESC"
+        );
+    }
+
+    public Cursor queryLogsByDate(String date) {
+        return sqLiteDatabase.query(
+                TABLE_NAME,
+                null,
+                HabitLogsDatabaseContract.habitLogsColumns.LOG_DATE + " = ?",
+                new String[]{date},
+                null,
+                null,
+                HabitLogsDatabaseContract.habitLogsColumns._ID + " ASC"
+        );
+    }
 }

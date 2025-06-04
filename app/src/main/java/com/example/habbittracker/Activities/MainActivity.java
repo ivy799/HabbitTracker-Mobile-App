@@ -10,6 +10,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 
+import com.example.habbittracker.Fragment.GraphFragment;
 import com.example.habbittracker.Fragment.HomeFragment;
 import com.example.habbittracker.R;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -49,13 +50,9 @@ public class MainActivity extends AppCompatActivity {
 
                 if (itemId == R.id.nav_home) {
                     fragment = new HomeFragment();
+                } else if (itemId == R.id.tiga) {
+                    fragment = new GraphFragment();
                 }
-                // Tambahkan menu item lain sesuai kebutuhan
-                // else if (itemId == R.id.nav_statistics) {
-                //     fragment = new StatisticsFragment();
-                // } else if (itemId == R.id.nav_settings) {
-                //     fragment = new SettingsFragment();
-                // }
 
                 if (fragment != null) {
                     loadFragment(fragment);
