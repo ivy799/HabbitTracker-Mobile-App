@@ -3,11 +3,13 @@ package com.example.habbittracker.Fragment;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -40,7 +42,6 @@ import com.github.mikephil.charting.formatter.PercentFormatter;
 import com.github.mikephil.charting.utils.ColorTemplate;
 import com.google.android.material.button.MaterialButton;
 
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -51,6 +52,8 @@ import java.util.Locale;
 import java.util.Map;
 
 public class GraphFragment extends Fragment {
+
+    private static final String TAG = "GraphFragment";
 
     private TextView tvTotalHabits, tvActiveHabits, tvCompletionRate;
     private LineChart lineChart;
@@ -74,8 +77,7 @@ public class GraphFragment extends Fragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_graph, container, false);
 
         initViews(view);
@@ -98,19 +100,30 @@ public class GraphFragment extends Fragment {
         btnRefresh = view.findViewById(R.id.btnRefresh);
 
         rvRecentActivity = view.findViewById(R.id.rvRecentActivity);
-        rvRecentActivity.setLayoutManager(new LinearLayoutManager(getContext()));
 
-        // Initialize adapter with context
-        activityAdapter = new RecentActivityAdapter(recentLogs, getContext());
-        rvRecentActivity.setAdapter(activityAdapter);
+        // Debug: Check if views are found
+        Log.d(TAG, "LineChart found: " + (lineChart != null));
+        Log.d(TAG, "BarChart found: " + (barChart != null));
+        Log.d(TAG, "PieChart found: " + (pieChart != null));
+
+        if (rvRecentActivity != null) {
+            rvRecentActivity.setLayoutManager(new LinearLayoutManager(getContext()));
+            activityAdapter = new RecentActivityAdapter(recentLogs, getContext());
+            rvRecentActivity.setAdapter(activityAdapter);
+        }
     }
 
     private void setupClickListeners() {
-        btnToggleChart.setOnClickListener(v -> toggleChart());
-        btnRefresh.setOnClickListener(v -> refreshData());
+        if (btnToggleChart != null) {
+            btnToggleChart.setOnClickListener(v -> toggleChart());
+        }
+        if (btnRefresh != null) {
+            btnRefresh.setOnClickListener(v -> refreshData());
+        }
     }
 
     private void loadData() {
+        Log.d(TAG, "Loading data...");
         loadHabits();
         loadRecentActivity();
         updateStatistics();
@@ -127,9 +140,13 @@ public class GraphFragment extends Fragment {
             if (cursor != null) {
                 habitList = HabitMappingHelper.mapCursorToArrayList(cursor);
                 cursor.close();
+                Log.d(TAG, "Loaded " + habitList.size() + " habits");
+            } else {
+                Log.w(TAG, "Habits cursor is null");
             }
             habitHelper.close();
         } catch (Exception e) {
+            Log.e(TAG, "Error loading habits", e);
             e.printStackTrace();
         }
     }
@@ -137,19 +154,33 @@ public class GraphFragment extends Fragment {
     private void loadRecentActivity() {
         recentLogs.clear();
         try {
-            // Get recent logs from last 7 days
             Calendar cal = Calendar.getInstance();
             cal.add(Calendar.DAY_OF_MONTH, -7);
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
             String weekAgo = sdf.format(cal.getTime());
             String today = sdf.format(new Date());
 
-            Cursor cursor = HabitLogHelper.instance.queryByDateRange(weekAgo, today);
-            if (cursor != null) {
-                recentLogs = HabitLogsMappingHelper.mapCursorToArrayList(cursor);
-                cursor.close();
+            Log.d(TAG, "Querying logs from " + weekAgo + " to " + today);
+
+            if (HabitLogHelper.instance != null) {
+                Cursor cursor = HabitLogHelper.instance.queryByDateRange(weekAgo, today);
+                if (cursor != null) {
+                    recentLogs = HabitLogsMappingHelper.mapCursorToArrayList(cursor);
+                    cursor.close();
+                    Log.d(TAG, "Loaded " + recentLogs.size() + " recent logs");
+
+                    // Debug: Print all logs
+                    for (HabitLog log : recentLogs) {
+                        Log.d(TAG, "Log: Date=" + log.getLog_date() + ", Status=" + log.isStatus() + ", HabitId=" + log.getHabit_id());
+                    }
+                } else {
+                    Log.w(TAG, "Recent logs cursor is null");
+                }
+            } else {
+                Log.e(TAG, "HabitLogHelper.instance is null");
             }
         } catch (Exception e) {
+            Log.e(TAG, "Error loading recent activity", e);
             e.printStackTrace();
         }
 
@@ -175,31 +206,41 @@ public class GraphFragment extends Fragment {
         float completionRate = totalTargetDays > 0 ?
                 (totalCompletedDays * 100.0f) / totalTargetDays : 0;
 
-        tvTotalHabits.setText(String.valueOf(totalHabits));
-        tvActiveHabits.setText(String.valueOf(activeHabits));
-        tvCompletionRate.setText(String.format(Locale.getDefault(), "%.1f%%", completionRate));
+        Log.d(TAG, "Statistics - Total: " + totalHabits + ", Active: " + activeHabits + ", Completion: " + completionRate + "%");
+
+        if (tvTotalHabits != null) tvTotalHabits.setText(String.valueOf(totalHabits));
+        if (tvActiveHabits != null) tvActiveHabits.setText(String.valueOf(activeHabits));
+        if (tvCompletionRate != null) tvCompletionRate.setText(String.format(Locale.getDefault(), "%.1f%%", completionRate));
     }
 
     private void setupCharts() {
+        Log.d(TAG, "Setting up charts...");
         setupLineChart();
         setupBarChart();
         setupPieChart();
     }
 
     private void setupLineChart() {
+        if (lineChart == null) {
+            Log.e(TAG, "LineChart is null");
+            return;
+        }
+
+        Log.d(TAG, "Setting up LineChart...");
+
         List<Entry> entries = new ArrayList<>();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
 
         // Generate data for last 7 days
-        Calendar cal = Calendar.getInstance();
         for (int i = 6; i >= 0; i--) {
-            cal.add(Calendar.DAY_OF_MONTH, -i);
-            String date = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.getTime());
+            Calendar tempCal = Calendar.getInstance();
+            tempCal.add(Calendar.DAY_OF_MONTH, -i);
+            String date = sdf.format(tempCal.getTime());
 
-            // Count completed habits for this date
             int completedCount = countCompletedHabitsForDate(date);
             entries.add(new Entry(6 - i, completedCount));
 
-            cal.add(Calendar.DAY_OF_MONTH, i); // Reset
+            Log.d(TAG, "Day " + (6-i) + " - Date: " + date + ", Completed: " + completedCount);
         }
 
         LineDataSet dataSet = new LineDataSet(entries, "Completed Habits");
@@ -228,6 +269,7 @@ public class GraphFragment extends Fragment {
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setValueFormatter(new IndexAxisValueFormatter(getLastSevenDays()));
         xAxis.setGranularity(1f);
+        xAxis.setLabelCount(7);
 
         // Y-axis
         YAxis leftAxis = lineChart.getAxisLeft();
@@ -236,16 +278,24 @@ public class GraphFragment extends Fragment {
         lineChart.getAxisRight().setEnabled(false);
         lineChart.animateX(1000);
         lineChart.invalidate();
+
+        Log.d(TAG, "LineChart setup completed");
     }
 
     private void setupBarChart() {
+        if (barChart == null) {
+            Log.e(TAG, "BarChart is null");
+            return;
+        }
+
         List<BarEntry> entries = new ArrayList<>();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
 
         // Generate data for last 7 days
         for (int i = 0; i < 7; i++) {
-            Calendar cal = Calendar.getInstance();
-            cal.add(Calendar.DAY_OF_MONTH, -6 + i);
-            String date = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.getTime());
+            Calendar tempCal = Calendar.getInstance();
+            tempCal.add(Calendar.DAY_OF_MONTH, -6 + i);
+            String date = sdf.format(tempCal.getTime());
 
             int completedCount = countCompletedHabitsForDate(date);
             entries.add(new BarEntry(i, completedCount));
@@ -276,12 +326,18 @@ public class GraphFragment extends Fragment {
     }
 
     private void setupPieChart() {
+        if (pieChart == null) {
+            Log.e(TAG, "PieChart is null");
+            return;
+        }
+
         Map<String, Integer> categoryCount = new HashMap<>();
 
-        // Count habits by category
         for (Habit habit : habitList) {
             String category = habit.getCategory();
-            categoryCount.put(category, categoryCount.getOrDefault(category, 0) + 1);
+            if (category != null && !category.trim().isEmpty()) {
+                categoryCount.put(category, categoryCount.getOrDefault(category, 0) + 1);
+            }
         }
 
         List<PieEntry> entries = new ArrayList<>();
@@ -317,53 +373,80 @@ public class GraphFragment extends Fragment {
     }
 
     private void toggleChart() {
+        if (lineChart == null || barChart == null || btnToggleChart == null) {
+            Log.e(TAG, "Chart views or button is null");
+            return;
+        }
+
         if (isLineChartVisible) {
             lineChart.setVisibility(View.GONE);
             barChart.setVisibility(View.VISIBLE);
             btnToggleChart.setText("Line Chart");
             isLineChartVisible = false;
+            Log.d(TAG, "Switched to Bar Chart");
         } else {
             lineChart.setVisibility(View.VISIBLE);
             barChart.setVisibility(View.GONE);
             btnToggleChart.setText("Bar Chart");
             isLineChartVisible = true;
+            Log.d(TAG, "Switched to Line Chart");
         }
     }
 
     private void refreshData() {
+        Log.d(TAG, "Refreshing data...");
+
         // Add refresh animation to button
-        btnRefresh.animate().rotation(360f).setDuration(500).start();
+        if (btnRefresh != null) {
+            btnRefresh.animate().rotation(360f).setDuration(500).start();
+        }
 
         loadData();
+        Toast.makeText(getContext(), "Data refreshed", Toast.LENGTH_SHORT).show();
     }
 
     private int countCompletedHabitsForDate(String date) {
         int count = 0;
+        Log.d(TAG, "Counting completed habits for date: " + date);
+
         for (HabitLog log : recentLogs) {
-            if (log.getLog_date().equals(date) && log.isStatus() == 1) { // 1 = completed
-                count++;
+            try {
+                String logDate = String.valueOf(log.getLog_date());
+                int status = log.isStatus();
+
+                Log.d(TAG, "Checking log - Date: " + logDate + ", Status: " + status);
+
+                if (logDate != null && logDate.equals(date) && status == 1) {
+                    count++;
+                    Log.d(TAG, "Found completed habit for " + date);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error checking log", e);
             }
         }
+
+        Log.d(TAG, "Total completed habits for " + date + ": " + count);
         return count;
     }
 
     private String[] getLastSevenDays() {
         String[] days = new String[7];
-        Calendar cal = Calendar.getInstance();
         SimpleDateFormat sdf = new SimpleDateFormat("MMM dd", Locale.getDefault());
 
         for (int i = 6; i >= 0; i--) {
-            cal.add(Calendar.DAY_OF_MONTH, -i);
-            days[6 - i] = sdf.format(cal.getTime());
-            cal.add(Calendar.DAY_OF_MONTH, i); // Reset
+            Calendar tempCal = Calendar.getInstance();
+            tempCal.add(Calendar.DAY_OF_MONTH, -i);
+            days[6 - i] = sdf.format(tempCal.getTime());
         }
 
+        Log.d(TAG, "Last seven days: " + String.join(", ", days));
         return days;
     }
 
     @Override
     public void onResume() {
         super.onResume();
+        Log.d(TAG, "Fragment resumed");
         refreshData();
     }
 }
