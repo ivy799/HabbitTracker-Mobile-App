@@ -2,13 +2,20 @@ package com.example.habbittracker.Fragment;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -18,28 +25,50 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.habbittracker.Activities.HabitFormActivity;
 import com.example.habbittracker.Adapters.HabitAdapter;
+import com.example.habbittracker.Api_config.ApiService;
+import com.example.habbittracker.Api_config.RetrofitClient;
 import com.example.habbittracker.Database_config.DatabaseHelper;
 import com.example.habbittracker.Database_config.Habit.HabitHelper;
 import com.example.habbittracker.Database_config.Habit.HabitMappingHelper;
 import com.example.habbittracker.Database_config.HabitLogs.HabitLogHelper;
 import com.example.habbittracker.Models.Habit;
+import com.example.habbittracker.Models.Quotes;
 import com.example.habbittracker.R;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 
 import java.lang.ref.WeakReference;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class HomeFragment extends Fragment {
 
     private static final int REQUEST_ADD = 100;
     private static final int REQUEST_UPDATE = 200;
+
+    // Views
     private RecyclerView rvHabit;
     private ExtendedFloatingActionButton fabAdd;
+    private TextView tvQuote, tvAuthor;
+    private ImageView btnRefreshQuote;
+    private ProgressBar progressBarQuote;
+
+    // Adapters and Helpers
     private HabitAdapter adapter;
     private HabitHelper habitHelper;
+
+    // Quote caching
+    private SharedPreferences sharedPreferences;
+    private static final String PREF_NAME = "QuotePrefs";
+    private static final String KEY_LAST_QUOTE_TEXT = "last_quote_text";
+    private static final String KEY_LAST_QUOTE_AUTHOR = "last_quote_author";
+    private static final String KEY_LAST_FETCH_TIME = "last_fetch_time";
 
     public HomeFragment() {
     }
@@ -51,20 +80,30 @@ public class HomeFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Inisialisasi database
+
+        // Initialize SharedPreferences
+        sharedPreferences = requireActivity().getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+
+        // Initialize database
         DatabaseHelper dbHelper = new DatabaseHelper(requireContext());
         HabitLogHelper.getInstance(dbHelper).open();
 
-        // Inisialisasi helper
+        // Initialize helper
         habitHelper = HabitHelper.getInstance(requireContext());
     }
 
     @Override
     public void onResume() {
         super.onResume();
-
         habitHelper.open();
         loadData();
+
+        // Load quote if needed
+        if (shouldFetchNewQuote()) {
+            fetchRandomQuote();
+        } else {
+            loadCachedQuote();
+        }
     }
 
     @Override
@@ -74,7 +113,7 @@ public class HomeFragment extends Fragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_home, container, false);
     }
 
@@ -82,19 +121,39 @@ public class HomeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        initViews(view);
+        setupRecyclerView();
+        setupClickListeners();
+        loadCachedQuote();
+        loadData();
+    }
+
+    private void initViews(View view) {
         rvHabit = view.findViewById(R.id.rv_habits);
         fabAdd = view.findViewById(R.id.fab_add);
+        tvQuote = view.findViewById(R.id.tvQuote);
+        tvAuthor = view.findViewById(R.id.tvAuthor);
+        btnRefreshQuote = view.findViewById(R.id.btnRefreshQuote);
+        progressBarQuote = view.findViewById(R.id.progressBarQuote);
+    }
 
+    private void setupRecyclerView() {
         rvHabit.setLayoutManager(new LinearLayoutManager(requireContext()));
         adapter = new HabitAdapter(requireActivity());
         rvHabit.setAdapter(adapter);
+    }
 
+    private void setupClickListeners() {
         fabAdd.setOnClickListener(v -> {
             Intent intent = new Intent(requireActivity(), HabitFormActivity.class);
             startActivityForResult(intent, REQUEST_ADD);
         });
 
-        loadData();
+        btnRefreshQuote.setOnClickListener(v -> {
+            // Add rotation animation
+            v.animate().rotation(360f).setDuration(500).start();
+            fetchRandomQuote();
+        });
     }
 
     private void loadData() {
@@ -105,6 +164,97 @@ public class HomeFragment extends Fragment {
                 adapter.setListHabits(new ArrayList<>());
             }
         }).execute();
+    }
+
+    private void loadCachedQuote() {
+        String cachedText = sharedPreferences.getString(KEY_LAST_QUOTE_TEXT, null);
+        String cachedAuthor = sharedPreferences.getString(KEY_LAST_QUOTE_AUTHOR, null);
+
+        if (cachedText != null && cachedAuthor != null) {
+            displayQuote(cachedText, cachedAuthor);
+        } else {
+            showDefaultQuote();
+        }
+    }
+
+    private boolean shouldFetchNewQuote() {
+        long lastFetchTime = sharedPreferences.getLong(KEY_LAST_FETCH_TIME, 0);
+        long currentTime = System.currentTimeMillis();
+        long timeDifference = currentTime - lastFetchTime;
+
+        // Fetch new quote if last fetch was more than 4 hours ago
+        return timeDifference > (4 * 60 * 60 * 1000);
+    }
+
+    private void fetchRandomQuote() {
+        if (!isNetworkAvailable()) {
+            Toast.makeText(requireContext(), "No internet connection", Toast.LENGTH_SHORT).show();
+            loadCachedQuote();
+            return;
+        }
+
+        showQuoteLoading(true);
+
+        ApiService apiService = RetrofitClient.getQuoteApi();
+        Call<List<Quotes>> call = apiService.getRandomQuote();
+
+        call.enqueue(new Callback<List<Quotes>>() {
+            @Override
+            public void onResponse(Call<List<Quotes>> call, Response<List<Quotes>> response) {
+                showQuoteLoading(false);
+
+                if (response.isSuccessful() && response.body() != null && !response.body().isEmpty()) {
+                    Quotes quote = response.body().get(0);
+                    String quoteText = quote.getQ();
+                    String author = quote.getA();
+
+                    displayQuote(quoteText, author);
+                    saveQuoteToCache(quoteText, author);
+                } else {
+                    Toast.makeText(requireContext(), "Failed to load quote", Toast.LENGTH_SHORT).show();
+                    loadCachedQuote();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<Quotes>> call, Throwable t) {
+                showQuoteLoading(false);
+                Toast.makeText(requireContext(), "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                loadCachedQuote();
+            }
+        });
+    }
+
+    private void displayQuote(String quoteText, String author) {
+        if (tvQuote != null && tvAuthor != null) {
+            tvQuote.setText("\"" + quoteText + "\"");
+            tvAuthor.setText("— " + author);
+        }
+    }
+
+    private void saveQuoteToCache(String quoteText, String author) {
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString(KEY_LAST_QUOTE_TEXT, quoteText);
+        editor.putString(KEY_LAST_QUOTE_AUTHOR, author);
+        editor.putLong(KEY_LAST_FETCH_TIME, System.currentTimeMillis());
+        editor.apply();
+    }
+
+    private void showDefaultQuote() {
+        displayQuote("The secret of getting ahead is getting started.", "Mark Twain");
+    }
+
+    private void showQuoteLoading(boolean show) {
+        if (progressBarQuote != null) {
+            progressBarQuote.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager =
+                (ConnectivityManager) requireActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
     }
 
     @Override
