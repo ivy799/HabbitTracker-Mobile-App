@@ -10,6 +10,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 
+import com.example.habbittracker.Fragment.GeneralFragment;
 import com.example.habbittracker.Fragment.GraphFragment;
 import com.example.habbittracker.Fragment.HomeFragment;
 import com.example.habbittracker.R;
@@ -27,6 +28,9 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+
+        com.example.habbittracker.ThemeManager.applyTheme(this);
+
 
         if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle("Habit Tracker");
@@ -52,6 +56,8 @@ public class MainActivity extends AppCompatActivity {
                     fragment = new HomeFragment();
                 } else if (itemId == R.id.tiga) {
                     fragment = new GraphFragment();
+                } else if (itemId == R.id.satu) {
+                    fragment = new GeneralFragment();
                 }
 
                 if (fragment != null) {
