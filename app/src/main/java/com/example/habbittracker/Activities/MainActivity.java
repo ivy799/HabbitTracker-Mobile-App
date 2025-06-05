@@ -37,7 +37,6 @@ public class MainActivity extends AppCompatActivity {
         // Setup bottom navigation (jika diperlukan)
         setupBottomNavigation();
 
-        // Tampilkan HomeFragment sebagai fragment awal
         if (savedInstanceState == null) {
             loadFragment(new HomeFragment());
         }
@@ -45,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupBottomNavigation() {
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation);
+        bottomNavigationView.setSelectedItemId(R.id.nav_home);
         if (bottomNavigationView != null) {
             bottomNavigationView.setOnItemSelectedListener(item -> {
                 Fragment fragment = null;

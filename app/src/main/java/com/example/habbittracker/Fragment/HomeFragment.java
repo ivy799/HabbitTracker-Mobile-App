@@ -16,13 +16,11 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.example.habbittracker.Activities.HabitFormActivity;
 import com.example.habbittracker.Adapters.HabitAdapter;
 import com.example.habbittracker.Api_config.ApiService;
@@ -35,14 +33,12 @@ import com.example.habbittracker.Models.Habit;
 import com.example.habbittracker.Models.Quotes;
 import com.example.habbittracker.R;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
-
 import java.lang.ref.WeakReference;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
