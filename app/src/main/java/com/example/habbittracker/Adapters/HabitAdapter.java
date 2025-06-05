@@ -119,6 +119,7 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
             boolean sudahSelesaiHariIni = false;
             boolean weeklyCooldownPassed = true;
+            boolean monthlyCooldownPassed = true;
 
 
             Cursor habitLog = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today);
@@ -130,8 +131,8 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 }
             }
 
+            // Cek cooldown untuk weekly dan monthly
             if (habit.getFrequency().equalsIgnoreCase("weekly")) {
-                // Query log terakhir dengan status = 1 (complete)
                 Cursor lastWeeklyLog = HabitLogHelper.instance.queryLastCompletedLogByHabitId(habit.getId());
                 if (lastWeeklyLog != null && lastWeeklyLog.moveToFirst()) {
                     int logDateColIndex = lastWeeklyLog.getColumnIndex("log_date");
@@ -145,11 +146,72 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                             long diffDays = diffMillis / (1000 * 60 * 60 * 24);
                             weeklyCooldownPassed = diffDays >= 7;
                         } catch (Exception e) {
-                            weeklyCooldownPassed = true; // default allow jika error parsing date
+                            weeklyCooldownPassed = true;
                         }
                     }
                 }
                 if (lastWeeklyLog != null) lastWeeklyLog.close();
+            }
+            if (habit.getFrequency().equalsIgnoreCase("monthly")) {
+                Cursor lastMonthlyLog = HabitLogHelper.instance.queryLastCompletedLogByHabitId(habit.getId());
+                if (lastMonthlyLog != null && lastMonthlyLog.moveToFirst()) {
+                    int logDateColIndex = lastMonthlyLog.getColumnIndex("log_date");
+                    if (logDateColIndex >= 0) {
+                        String lastLogDate = lastMonthlyLog.getString(logDateColIndex);
+                        try {
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                            Date lastDate = sdf.parse(lastLogDate);
+                            Date now = sdf.parse(today);
+                            long diffMillis = now.getTime() - lastDate.getTime();
+                            long diffDays = diffMillis / (1000 * 60 * 60 * 24);
+                            monthlyCooldownPassed = diffDays >= 30; // atau sesuaikan logika bulanan
+                        } catch (Exception e) {
+                            monthlyCooldownPassed = true; // Allow jika gagal parsing
+                        }
+                    }
+                    lastMonthlyLog.close();
+                }
+            }
+
+            try {
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                Date todayDate = sdf.parse(today);
+
+                Cursor lastLogCursor = HabitLogHelper.instance.queryLastCompletedLogByHabitId(habit.getId());
+
+                if (lastLogCursor != null && lastLogCursor.moveToFirst()) {
+                    int logDateColIndex = lastLogCursor.getColumnIndex("log_date");
+                    if (logDateColIndex >= 0) {
+                        String lastLogDate = lastLogCursor.getString(logDateColIndex);
+                        Date lastDate = sdf.parse(lastLogDate);
+                        long diffDays = (todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24);
+
+                        boolean missedStreak = false;
+
+                        if (habit.getFrequency().equalsIgnoreCase("daily") && diffDays >= 2) {
+                            missedStreak = true;
+                        } else if (habit.getFrequency().equalsIgnoreCase("weekly") && diffDays >= 14) {
+                            missedStreak = true;
+                        } else if (habit.getFrequency().equalsIgnoreCase("monthly") && diffDays >= 60) {
+                            missedStreak = true;
+                        }
+
+                        if (missedStreak) {
+                            ContentValues resetValues = new ContentValues();
+                            resetValues.put("current_count", 0);
+                            habit.setCurrent_count(0);
+                            HabitHelper.instance.update(String.valueOf(habit.getId()), resetValues);
+                            tvHabitCurrent.setText("0");
+                            progressBar.setProgress(0);
+                            Toast.makeText(itemView.getContext(),
+                                    "You missed your habit for too long. Streak reset!",
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                    lastLogCursor.close();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
 
 
@@ -164,6 +226,8 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             boolean canCompleteToday;
             if (habit.getFrequency().equalsIgnoreCase("weekly")) {
                 canCompleteToday = habit.getIs_active() && !sudahSelesaiHariIni && weeklyCooldownPassed;
+            } else if (habit.getFrequency().equalsIgnoreCase("monthly")) {
+                canCompleteToday = habit.getIs_active() && !sudahSelesaiHariIni && monthlyCooldownPassed;
             } else {
                 canCompleteToday = habit.getIs_active() && !sudahSelesaiHariIni;
             }
