@@ -35,11 +35,23 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
 
     public void setListHabits(ArrayList<Habit> habits) {
         listHabits.clear();
-        if (habits.size() > 0) {
-            this.listHabits.addAll(habits);
+
+        for (Habit habit : habits) {
+            // Refresh dari database untuk memastikan data terbaru
+            Cursor cursor = HabitHelper.instance.search(habit.getId());
+            if (cursor != null && cursor.moveToFirst()) {
+                int freqIndex = cursor.getColumnIndex("frequency");
+                if (freqIndex >= 0) {
+                    habit.setFrequency(cursor.getString(freqIndex));
+                }
+                cursor.close();
+            }
+            listHabits.add(habit);
         }
+
         notifyDataSetChanged();
     }
+
 
     @NonNull
     @Override
@@ -106,6 +118,7 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
 
             String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
             boolean sudahSelesaiHariIni = false;
+            boolean weeklyCooldownPassed = true;
 
 
             Cursor habitLog = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today);
@@ -117,6 +130,29 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 }
             }
 
+            if (habit.getFrequency().equalsIgnoreCase("weekly")) {
+                // Query log terakhir dengan status = 1 (complete)
+                Cursor lastWeeklyLog = HabitLogHelper.instance.queryLastCompletedLogByHabitId(habit.getId());
+                if (lastWeeklyLog != null && lastWeeklyLog.moveToFirst()) {
+                    int logDateColIndex = lastWeeklyLog.getColumnIndex("log_date");
+                    if (logDateColIndex >= 0) { // <-- CEK DI SINI
+                        String lastLogDate = lastWeeklyLog.getString(logDateColIndex);
+                        try {
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                            Date lastDate = sdf.parse(lastLogDate);
+                            Date now = sdf.parse(today);
+                            long diffMillis = now.getTime() - lastDate.getTime();
+                            long diffDays = diffMillis / (1000 * 60 * 60 * 24);
+                            weeklyCooldownPassed = diffDays >= 7;
+                        } catch (Exception e) {
+                            weeklyCooldownPassed = true; // default allow jika error parsing date
+                        }
+                    }
+                }
+                if (lastWeeklyLog != null) lastWeeklyLog.close();
+            }
+
+
             // Set background status badge
             if (habit.getIs_active()) {
                 tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge);
@@ -125,7 +161,12 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             }
 
             // Atur state tombol
-            boolean canCompleteToday = habit.getIs_active() && !sudahSelesaiHariIni;
+            boolean canCompleteToday;
+            if (habit.getFrequency().equalsIgnoreCase("weekly")) {
+                canCompleteToday = habit.getIs_active() && !sudahSelesaiHariIni && weeklyCooldownPassed;
+            } else {
+                canCompleteToday = habit.getIs_active() && !sudahSelesaiHariIni;
+            }
             btnFinishHabit.setEnabled(canCompleteToday);
             btnSkipHabit.setEnabled(canCompleteToday);
             btnDeactivateHabit.setText(habit.getIs_active() ? "Disable" : "Activate");

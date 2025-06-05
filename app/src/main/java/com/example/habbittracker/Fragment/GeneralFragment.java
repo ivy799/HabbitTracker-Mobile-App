@@ -1,6 +1,7 @@
 package com.example.habbittracker.Fragment;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -13,7 +14,9 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.example.habbittracker.Activities.MainActivity;
 import com.example.habbittracker.R;
+import com.example.habbittracker.ThemeManager;
 
 public class GeneralFragment extends Fragment {
 
@@ -77,7 +80,7 @@ public class GeneralFragment extends Fragment {
     }
 
     private void loadSavedTheme() {
-        int savedTheme = sharedPreferences.getInt(THEME_KEY, THEME_SYSTEM);
+        int savedTheme = ThemeManager.getSavedTheme(requireContext());
 
         switch (savedTheme) {
             case THEME_SYSTEM:
@@ -108,24 +111,25 @@ public class GeneralFragment extends Fragment {
 
     private void applySelectedTheme() {
         int selectedTheme = THEME_SYSTEM;
-        int nightMode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
 
         if (radioLight.isChecked()) {
             selectedTheme = THEME_LIGHT;
-            nightMode = AppCompatDelegate.MODE_NIGHT_NO;
         } else if (radioDark.isChecked()) {
             selectedTheme = THEME_DARK;
-            nightMode = AppCompatDelegate.MODE_NIGHT_YES;
         }
 
-        // Save theme preference
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putInt(THEME_KEY, selectedTheme);
-        editor.apply();
+        // Save theme preference menggunakan ThemeManager
+        ThemeManager.saveTheme(requireContext(), selectedTheme);
 
         // Apply theme
-        AppCompatDelegate.setDefaultNightMode(nightMode);
+        ThemeManager.applyTheme(requireContext());
 
-        Toast.makeText(getContext(), "Theme applied successfully!", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), "Theme applied! Restarting app...", Toast.LENGTH_SHORT).show();
+
+        // Restart activity untuk menerapkan tema secara penuh
+        Intent intent = new Intent(getActivity(), MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        requireActivity().finish();
     }
 }

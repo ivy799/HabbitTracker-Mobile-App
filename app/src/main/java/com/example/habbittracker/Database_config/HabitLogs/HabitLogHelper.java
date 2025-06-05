@@ -148,4 +148,21 @@ public class HabitLogHelper {
                 HabitLogsDatabaseContract.habitLogsColumns._ID + " ASC"
         );
     }
+
+    public Cursor queryLastCompletedLogByHabitId(int habitId) {
+        // Mengambil log terakhir yang memiliki status 1 (selesai) untuk habit tertentu
+        return sqLiteDatabase.query(
+                TABLE_NAME,
+                null,
+                HabitLogsDatabaseContract.habitLogsColumns.HABIT_ID + " = ? AND " +
+                        HabitLogsDatabaseContract.habitLogsColumns.STATUS + " = 1",
+                new String[]{String.valueOf(habitId)},
+                null,
+                null,
+                HabitLogsDatabaseContract.habitLogsColumns.LOG_DATE + " DESC",
+                "1"
+        );
+    }
+
+
 }
