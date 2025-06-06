@@ -1,29 +1,31 @@
 package com.example.habbittracker.Adapters;
 
+import android.animation.ObjectAnimator;
 import android.app.Activity;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.habbittracker.Database_config.Habit.HabitHelper;
 import com.example.habbittracker.Database_config.HabitLogs.HabitLogHelper;
 import com.example.habbittracker.Models.Habit;
 import com.example.habbittracker.R;
+import com.google.android.material.button.MaterialButton;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHolder> {
     private final ArrayList<Habit> listHabits = new ArrayList<>();
@@ -52,7 +54,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
         notifyDataSetChanged();
     }
 
-
     @NonNull
     @Override
     public HabitAdapter.HabitViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -79,8 +80,13 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
         final TextView tvHabitTarget;
         final TextView tvHabitCurrent;
         final TextView tvHabitStatus;
-        final Button btnFinishHabit, btnSkipHabit, btnDeactivateHabit;
+        final MaterialButton btnFinishHabit, btnSkipHabit, btnDeactivateHabit;
         final ProgressBar progressBar;
+        final ImageButton btnToggleDetails;
+        final ConstraintLayout detailsSection;
+
+        // State untuk dropdown
+        private boolean isExpanded = false;
 
         public HabitViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -96,10 +102,55 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             this.btnSkipHabit = itemView.findViewById(R.id.btnSkipHabit);
             this.btnDeactivateHabit = itemView.findViewById(R.id.btnDeactivateHabit);
             this.progressBar = itemView.findViewById(R.id.progressBar);
+            this.btnToggleDetails = itemView.findViewById(R.id.btnToggleDetails);
+            this.detailsSection = itemView.findViewById(R.id.detailsSection);
 
+            // Setup dropdown toggle
+            setupDropdownToggle();
+        }
+
+        private void setupDropdownToggle() {
+            btnToggleDetails.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    toggleDetails();
+                }
+            });
+        }
+
+        private void toggleDetails() {
+            isExpanded = !isExpanded;
+
+            if (isExpanded) {
+                // Tampilkan detail section
+                detailsSection.setVisibility(View.VISIBLE);
+
+                // Animasi rotasi tombol dropdown
+                ObjectAnimator rotation = ObjectAnimator.ofFloat(btnToggleDetails, "rotation", 0f, 180f);
+                rotation.setDuration(200);
+                rotation.start();
+
+            } else {
+                // Sembunyikan detail section
+                detailsSection.setVisibility(View.GONE);
+
+                // Animasi rotasi tombol dropdown kembali
+                ObjectAnimator rotation = ObjectAnimator.ofFloat(btnToggleDetails, "rotation", 180f, 0f);
+                rotation.setDuration(200);
+                rotation.start();
+            }
+        }
+
+        private void resetDropdownState() {
+            isExpanded = false;
+            detailsSection.setVisibility(View.GONE);
+            btnToggleDetails.setRotation(0f);
         }
 
         void bind(Habit habit) {
+            // Reset dropdown state untuk recycling
+            resetDropdownState();
+
             tvHabitName.setText(habit.getName());
             tvHabitDescription.setText(habit.getDescription());
             tvHabitCategory.setText(habit.getCategory());
@@ -121,7 +172,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             boolean weeklyCooldownPassed = true;
             boolean monthlyCooldownPassed = true;
 
-
             Cursor habitLog = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today);
             if (habitLog != null && habitLog.moveToFirst()) {
                 int statusColumnIndex = habitLog.getColumnIndex("status");
@@ -136,7 +186,7 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 Cursor lastWeeklyLog = HabitLogHelper.instance.queryLastCompletedLogByHabitId(habit.getId());
                 if (lastWeeklyLog != null && lastWeeklyLog.moveToFirst()) {
                     int logDateColIndex = lastWeeklyLog.getColumnIndex("log_date");
-                    if (logDateColIndex >= 0) { // <-- CEK DI SINI
+                    if (logDateColIndex >= 0) {
                         String lastLogDate = lastWeeklyLog.getString(logDateColIndex);
                         try {
                             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
@@ -164,9 +214,9 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                             Date now = sdf.parse(today);
                             long diffMillis = now.getTime() - lastDate.getTime();
                             long diffDays = diffMillis / (1000 * 60 * 60 * 24);
-                            monthlyCooldownPassed = diffDays >= 30; // atau sesuaikan logika bulanan
+                            monthlyCooldownPassed = diffDays >= 30;
                         } catch (Exception e) {
-                            monthlyCooldownPassed = true; // Allow jika gagal parsing
+                            monthlyCooldownPassed = true;
                         }
                     }
                     lastMonthlyLog.close();
@@ -214,7 +264,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 e.printStackTrace();
             }
 
-
             // Set background status badge
             if (habit.getIs_active()) {
                 tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge);
@@ -236,88 +285,97 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             btnDeactivateHabit.setText(habit.getIs_active() ? "Disable" : "Activate");
 
             // Tombol Finish
-            btnFinishHabit.setOnClickListener(v -> {
-                try (Cursor c = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today)) {
-                    boolean alreadyLogged = (c != null && c.moveToFirst());
-                    if (!alreadyLogged) {
-                        ContentValues values = new ContentValues();
-                        values.put("habit_id", habit.getId());
-                        values.put("log_date", today);
-                        values.put("status", 1);
-                        HabitLogHelper.instance.insert(values);
+            btnFinishHabit.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    try (Cursor c = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today)) {
+                        boolean alreadyLogged = (c != null && c.moveToFirst());
+                        if (!alreadyLogged) {
+                            ContentValues values = new ContentValues();
+                            values.put("habit_id", habit.getId());
+                            values.put("log_date", today);
+                            values.put("status", 1);
+                            HabitLogHelper.instance.insert(values);
 
-                        // Update model
-                        habit.setCurrent_count(habit.getCurrent_count() + 1);
-                        habit.setIs_active(habit.getCurrent_count() < habit.getTarget_count());
+                            // Update model
+                            habit.setCurrent_count(habit.getCurrent_count() + 1);
+                            habit.setIs_active(habit.getCurrent_count() < habit.getTarget_count());
 
-                        ContentValues habitValues = new ContentValues();
-                        habitValues.put("current_count", habit.getCurrent_count());
-                        habitValues.put("is_active", habit.getIs_active() ? 1 : 0);
-                        HabitHelper.instance.update(String.valueOf(habit.getId()), habitValues);
+                            ContentValues habitValues = new ContentValues();
+                            habitValues.put("current_count", habit.getCurrent_count());
+                            habitValues.put("is_active", habit.getIs_active() ? 1 : 0);
+                            HabitHelper.instance.update(String.valueOf(habit.getId()), habitValues);
 
-                        // Update UI
-                        tvHabitCurrent.setText(String.valueOf(habit.getCurrent_count()));
-                        int newProgress = (int) ((habit.getCurrent_count() * 100.0f) / habit.getTarget_count());
-                        progressBar.setProgress(newProgress);
+                            // Update UI
+                            tvHabitCurrent.setText(String.valueOf(habit.getCurrent_count()));
+                            int newProgress = (int) ((habit.getCurrent_count() * 100.0f) / habit.getTarget_count());
+                            progressBar.setProgress(newProgress);
 
-                        if (!habit.getIs_active()) {
-                            tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge_inactive);
-                            tvHabitStatus.setText("Inactive");
+                            if (!habit.getIs_active()) {
+                                tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge_inactive);
+                                tvHabitStatus.setText("Inactive");
+                            }
+
+                            btnFinishHabit.setEnabled(false);
+                            btnSkipHabit.setEnabled(false);
                         }
-
-                        btnFinishHabit.setEnabled(false);
-                        btnSkipHabit.setEnabled(false);
                     }
                 }
             });
 
             // Tombol Deactivate / Activate
-            btnDeactivateHabit.setOnClickListener(v -> {
-                ContentValues values = new ContentValues();
-                boolean isActivating = !habit.getIs_active();
+            btnDeactivateHabit.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    ContentValues values = new ContentValues();
+                    boolean isActivating = !habit.getIs_active();
 
-                values.put("is_active", isActivating ? 1 : 0);
-                values.put("current_count", 0);
-                habit.setIs_active(isActivating);
-                habit.setCurrent_count(0);
-                HabitHelper.instance.update(String.valueOf(habit.getId()), values);
+                    values.put("is_active", isActivating ? 1 : 0);
+                    values.put("current_count", 0);
+                    habit.setIs_active(isActivating);
+                    habit.setCurrent_count(0);
+                    HabitHelper.instance.update(String.valueOf(habit.getId()), values);
 
-                if (!isActivating) {
-                    HabitLogHelper.instance.deleteByHabitId(String.valueOf(habit.getId()));
+                    if (!isActivating) {
+                        HabitLogHelper.instance.deleteByHabitId(String.valueOf(habit.getId()));
+                    }
+
+                    // Update UI
+                    tvHabitStatus.setBackgroundResource(isActivating ? R.drawable.habit_status_badge : R.drawable.habit_status_badge_inactive);
+                    tvHabitStatus.setText(isActivating ? "Active" : "Inactive");
+                    tvHabitCurrent.setText("0");
+                    progressBar.setProgress(0);
+                    btnFinishHabit.setEnabled(isActivating);
+                    btnSkipHabit.setEnabled(isActivating);
+                    btnDeactivateHabit.setText(isActivating ? "Disable" : "Activate");
                 }
-
-                // Update UI
-                tvHabitStatus.setBackgroundResource(isActivating ? R.drawable.habit_status_badge : R.drawable.habit_status_badge_inactive);
-                tvHabitStatus.setText(isActivating ? "Active" : "Inactive");
-                tvHabitCurrent.setText("0");
-                progressBar.setProgress(0);
-                btnFinishHabit.setEnabled(isActivating);
-                btnSkipHabit.setEnabled(isActivating);
-                btnDeactivateHabit.setText(isActivating ? "Disable" : "Activate");
             });
 
             // Tombol Skip
-            btnSkipHabit.setOnClickListener(v -> {
-                try (Cursor c = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today)) {
-                    boolean alreadyLogged = (c != null && c.moveToFirst());
-                    if (!alreadyLogged) {
-                        ContentValues values = new ContentValues();
-                        values.put("habit_id", habit.getId());
-                        values.put("log_date", today);
-                        values.put("status", 2);
-                        HabitLogHelper.instance.insert(values);
+            btnSkipHabit.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    try (Cursor c = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today)) {
+                        boolean alreadyLogged = (c != null && c.moveToFirst());
+                        if (!alreadyLogged) {
+                            ContentValues values = new ContentValues();
+                            values.put("habit_id", habit.getId());
+                            values.put("log_date", today);
+                            values.put("status", 2);
+                            HabitLogHelper.instance.insert(values);
 
-                        btnFinishHabit.setEnabled(false);
-                        btnSkipHabit.setEnabled(false);
+                            btnFinishHabit.setEnabled(false);
+                            btnSkipHabit.setEnabled(false);
 
-                        Toast.makeText(itemView.getContext(),
-                                "Habit skipped for today. Your streak is preserved!",
-                                Toast.LENGTH_SHORT).show();
-                    } else {
-                        btnSkipHabit.setEnabled(false);
-                        Toast.makeText(itemView.getContext(),
-                                "You've already logged this habit today",
-                                Toast.LENGTH_SHORT).show();
+                            Toast.makeText(itemView.getContext(),
+                                    "Habit skipped for today. Your streak is preserved!",
+                                    Toast.LENGTH_SHORT).show();
+                        } else {
+                            btnSkipHabit.setEnabled(false);
+                            Toast.makeText(itemView.getContext(),
+                                    "You've already logged this habit today",
+                                    Toast.LENGTH_SHORT).show();
+                        }
                     }
                 }
             });
