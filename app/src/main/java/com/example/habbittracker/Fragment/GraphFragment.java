@@ -1,9 +1,11 @@
 package com.example.habbittracker.Fragment;
 
+import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +13,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -26,6 +29,7 @@ import com.example.habbittracker.R;
 import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.charts.PieChart;
+import com.github.mikephil.charting.components.Legend;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.BarData;
@@ -244,25 +248,36 @@ public class GraphFragment extends Fragment {
         }
 
         LineDataSet dataSet = new LineDataSet(entries, "Completed Habits");
-        dataSet.setColor(Color.parseColor("#6C5CE7"));
-        dataSet.setCircleColor(Color.parseColor("#6C5CE7"));
+
+        // Get theme colors
+        int primaryColor = getThemeColor
+                (com.google.android.material.R.attr.colorPrimary);
+        int onSurfaceColor = getThemeColor(com.google.android.material.R.attr.colorOnSurface);
+
+        dataSet.setColor(primaryColor);
+        dataSet.setCircleColor(primaryColor);
         dataSet.setLineWidth(3f);
         dataSet.setCircleRadius(6f);
         dataSet.setDrawCircleHole(false);
         dataSet.setValueTextSize(12f);
+        dataSet.setValueTextColor(onSurfaceColor);
         dataSet.setDrawFilled(true);
-        dataSet.setFillColor(Color.parseColor("#A29BFE"));
+        dataSet.setFillColor(primaryColor);
         dataSet.setFillAlpha(50);
 
         LineData lineData = new LineData(dataSet);
         lineChart.setData(lineData);
 
-        // Customize chart
+        // Customize chart with theme colors
         lineChart.getDescription().setEnabled(false);
         lineChart.setTouchEnabled(true);
         lineChart.setDragEnabled(true);
         lineChart.setScaleEnabled(true);
         lineChart.setPinchZoom(true);
+
+        // Set chart background color
+        boolean isDarkMode = isDarkMode();
+        lineChart.setBackgroundColor(Color.TRANSPARENT);
 
         // X-axis
         XAxis xAxis = lineChart.getXAxis();
@@ -270,12 +285,21 @@ public class GraphFragment extends Fragment {
         xAxis.setValueFormatter(new IndexAxisValueFormatter(getLastSevenDays()));
         xAxis.setGranularity(1f);
         xAxis.setLabelCount(7);
+        xAxis.setTextColor(onSurfaceColor);
+        xAxis.setAxisLineColor(onSurfaceColor);
 
         // Y-axis
         YAxis leftAxis = lineChart.getAxisLeft();
         leftAxis.setAxisMinimum(0f);
+        leftAxis.setTextColor(onSurfaceColor);
+        leftAxis.setAxisLineColor(onSurfaceColor);
 
         lineChart.getAxisRight().setEnabled(false);
+
+        // Legend
+        Legend legend = lineChart.getLegend();
+        legend.setTextColor(onSurfaceColor);
+
         lineChart.animateX(1000);
         lineChart.invalidate();
 
@@ -368,6 +392,11 @@ public class GraphFragment extends Fragment {
         pieChart.setHoleRadius(40f);
         pieChart.setTransparentCircleRadius(45f);
 
+        // Hanya ubah warna legend sesuai tema
+        Legend legend = pieChart.getLegend();
+        int onSurfaceColor = getThemeColor(com.google.android.material.R.attr.colorOnSurface);
+        legend.setTextColor(onSurfaceColor);
+
         pieChart.animateY(1000);
         pieChart.invalidate();
     }
@@ -448,5 +477,24 @@ public class GraphFragment extends Fragment {
         super.onResume();
         Log.d(TAG, "Fragment resumed");
         refreshData();
+    }
+
+    private int getThemeColor(int colorAttr) {
+        TypedValue typedValue = new TypedValue();
+        if (getContext() != null && getContext().getTheme().resolveAttribute(colorAttr, typedValue, true)) {
+            return ContextCompat.getColor(getContext(), typedValue.resourceId);
+        }
+        // Fallback colors
+        return isDarkMode() ? Color.WHITE : Color.BLACK;
+    }
+
+    /**
+     * Check if current theme is dark mode
+     */
+    private boolean isDarkMode() {
+        if (getContext() == null) return false;
+
+        int nightModeFlags = getContext().getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        return nightModeFlags == Configuration.UI_MODE_NIGHT_YES;
     }
 }
