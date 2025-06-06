@@ -60,7 +60,7 @@ public class GraphFragment extends Fragment {
     private BarChart barChart;
     private PieChart pieChart;
     private MaterialButton btnToggleChart;
-    private ImageView btnRefresh;
+    private MaterialButton btnRefresh;
     private RecyclerView rvRecentActivity;
     private RecentActivityAdapter activityAdapter;
 

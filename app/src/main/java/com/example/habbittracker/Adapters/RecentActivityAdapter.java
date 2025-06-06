@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.habbittracker.Database_config.Habit.HabitHelper;
 import com.example.habbittracker.Models.HabitLog;
 import com.example.habbittracker.R;
+import com.google.android.material.card.MaterialCardView;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -60,6 +61,7 @@ public class RecentActivityAdapter extends RecyclerView.Adapter<RecentActivityAd
     static class ActivityViewHolder extends RecyclerView.ViewHolder {
         ImageView ivIcon;
         TextView tvHabitName, tvDate, tvStatus;
+        MaterialCardView statusBadgeContainer;
 
         public ActivityViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -67,43 +69,80 @@ public class RecentActivityAdapter extends RecyclerView.Adapter<RecentActivityAd
             tvHabitName = itemView.findViewById(R.id.tvActivityHabitName);
             tvDate = itemView.findViewById(R.id.tvActivityDate);
             tvStatus = itemView.findViewById(R.id.tvActivityStatus);
+            statusBadgeContainer = itemView.findViewById(R.id.statusBadgeContainer);
         }
 
         void bind(HabitLog log, Context context) {
+            // Set habit name
             String habitName = getHabitNameById(log.getHabit_id(), context);
             tvHabitName.setText(habitName);
 
-            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+            // Format and set date
+            String formattedDate = formatDate(String.valueOf(log.getLog_date()));
+            tvDate.setText(formattedDate);
 
-            try {
-                String dateString = String.valueOf(log.getLog_date()); // misalnya "04-06-2025"
-                Date date = formatter.parse(dateString); // ubah String jadi Date
-                String formattedDate = formatter.format(date); // ubah Date jadi String lagi kalau mau tampilkan
-                tvDate.setText(formattedDate); // tampilkan di TextView
-            } catch (ParseException e) {
-                e.printStackTrace();
-                tvDate.setText("Format tanggal salah!");
+            // Set status with themed colors and icons
+            setActivityStatusAndIcon(log.getStatus(), context);
+        }
+
+        private void setActivityStatusAndIcon(int status, Context context) {
+            String statusText;
+            int iconRes;
+            int bgColorAttr;
+            int textColorAttr;
+
+            switch (status) {
+                case 1: // Completed
+                    statusText = "Completed";
+                    iconRes = R.drawable.ic_check_circle_24;
+                    bgColorAttr = com.google.android.material.R.attr.colorSecondary;
+                    textColorAttr = com.google.android.material.R.attr.colorOnSecondary;
+                    break;
+
+                case 2: // Skipped
+                    statusText = "Skipped";
+                    iconRes = R.drawable.ic_help_outline_24;
+                    bgColorAttr = com.google.android.material.R.attr.colorTertiary;
+                    textColorAttr = com.google.android.material.R.attr.colorOnTertiary;
+                    break;
+
+                case 3: // Missed
+                    statusText = "Missed";
+                    iconRes = R.drawable.ic_help_outline_24;
+                    bgColorAttr = com.google.android.material.R.attr.colorError;
+                    textColorAttr = com.google.android.material.R.attr.colorOnError;
+                    break;
+
+                default: // Unknown
+                    statusText = "Unknown";
+                    iconRes = R.drawable.ic_help_outline_24;
+                    bgColorAttr = com.google.android.material.R.attr.colorSurfaceVariant;
+                    textColorAttr = com.google.android.material.R.attr.colorOnSurfaceVariant;
+                    break;
             }
 
-            System.out.println("Log Status: " + log.getStatus());
+            // Set status text
+            tvStatus.setText(statusText);
 
+            // Set icon
+            ivIcon.setImageResource(iconRes);
 
-            if (log.getStatus() == 1) {
-                tvStatus.setText("Completed");
-                tvStatus.setTextColor(ContextCompat.getColor(context, R.color.success_color));
-                ivIcon.setImageResource(android.R.drawable.ic_media_play); // Using built-in icon as fallback
-                ivIcon.setColorFilter(ContextCompat.getColor(context, R.color.success_color));
-            } else if (log.getStatus() == 2) {
-                tvStatus.setText("Skipped");
-                tvStatus.setTextColor(ContextCompat.getColor(context, R.color.warning_color));
-                ivIcon.setImageResource(android.R.drawable.ic_media_pause); // Using built-in icon as fallback
-                ivIcon.setColorFilter(ContextCompat.getColor(context, R.color.warning_color));
-            } else {
-                tvStatus.setText("Unknown");
-                tvStatus.setTextColor(ContextCompat.getColor(context, R.color.text_secondary));
-                ivIcon.setImageResource(android.R.drawable.ic_dialog_info);
-                ivIcon.setColorFilter(ContextCompat.getColor(context, R.color.text_secondary));
-            }
+            // Get themed colors
+            int backgroundColor = getThemeColor(context, bgColorAttr);
+            int textColor = getThemeColor(context, textColorAttr);
+            int iconColor = getThemeColor(context, com.google.android.material.R.attr.colorOnPrimaryContainer);
+
+            // Apply colors
+            statusBadgeContainer.setCardBackgroundColor(backgroundColor);
+            tvStatus.setTextColor(textColor);
+            ivIcon.setColorFilter(iconColor);
+        }
+
+        private int getThemeColor(Context context, int colorAttr) {
+            android.util.TypedValue typedValue = new android.util.TypedValue();
+            android.content.res.Resources.Theme theme = context.getTheme();
+            theme.resolveAttribute(colorAttr, typedValue, true);
+            return ContextCompat.getColor(context, typedValue.resourceId);
         }
 
         private String getHabitNameById(int habitId, Context context) {
@@ -134,6 +173,23 @@ public class RecentActivityAdapter extends RecyclerView.Adapter<RecentActivityAd
                 SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
                 SimpleDateFormat outputFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
                 Date date = inputFormat.parse(dateString);
+
+                // Check if date is today
+                SimpleDateFormat todayFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                String today = todayFormat.format(new Date());
+
+                if (dateString.equals(today)) {
+                    return "Today";
+                }
+
+                // Check if date is yesterday
+                Date yesterday = new Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000);
+                String yesterdayStr = todayFormat.format(yesterday);
+
+                if (dateString.equals(yesterdayStr)) {
+                    return "Yesterday";
+                }
+
                 return outputFormat.format(date);
             } catch (ParseException e) {
                 e.printStackTrace();
