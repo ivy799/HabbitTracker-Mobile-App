@@ -8,6 +8,7 @@ import android.database.Cursor;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -433,28 +434,20 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                         HabitLogHelper.instance.insert(values);
 
                         // Update model
-                        habit.setCurrent_count(habit.getCurrent_count() + 1);
-                        habit.setIs_active(habit.getCurrent_count() < habit.getTarget_count());
+                        int newCurrentCount = habit.getCurrent_count() + 1;
+                        habit.setCurrent_count(newCurrentCount);
 
-                        ContentValues habitValues = new ContentValues();
-                        habitValues.put("current_count", habit.getCurrent_count());
-                        habitValues.put("is_active", habit.getIs_active() ? 1 : 0);
-                        HabitHelper.instance.update(String.valueOf(habit.getId()), habitValues);
-
-                        // Update UI
-                        tvHabitCurrent.setText(String.valueOf(habit.getCurrent_count()));
-                        int newProgress = (int) ((habit.getCurrent_count() * 100.0f) / habit.getTarget_count());
-                        progressBar.setProgress(newProgress);
-
-                        if (!habit.getIs_active()) {
-                            tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge_inactive);
-                            tvHabitStatus.setText("Inactive");
+                        // CEK APAKAH STREAK TERCAPAI
+                        if (newCurrentCount >= habit.getTarget_count()) {
+                            // STREAK TERCAPAI - TAMPILKAN DIALOG
+                            showStreakCompletionDialog(habit);
+                        } else {
+                            // Update normal tanpa dialog
+                            updateHabitProgress(habit, newCurrentCount);
                         }
 
                         btnFinishHabit.setEnabled(false);
                         btnSkipHabit.setEnabled(false);
-
-                        // Refresh sorting untuk memindahkan habit yang completed ke bawah
                         refreshSorting();
                     }
                 }
@@ -571,5 +564,179 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
 
 
         }
+        private void showStreakCompletionDialog(Habit habit) {
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(itemView.getContext())
+                    .setTitle("🎉 Streak Completed!")
+                    .setMessage("Congratulations! You've completed your habit streak for \"" + habit.getName() + "\"!\n\n" +
+                            "Current streak: " + habit.getCurrent_count() + "/" + habit.getTarget_count() + " completed\n\n" +
+                            "What would you like to do next?")
+                    .setIcon(R.drawable.ic_celebration_24) // Tambah icon celebration
+                    .setCancelable(false) // Tidak bisa dibatalkan dengan back button
+                    .setPositiveButton("Continue Habit", (dialog, which) -> {
+                        // User memilih untuk melanjutkan habit
+                        showContinueHabitDialog(habit);
+                    })
+                    .setNegativeButton("Stop & Rest", (dialog, which) -> {
+                        // User memilih untuk berhenti dan istirahat
+                        completeAndDeactivateHabit(habit);
+                    })
+                    .show();
+        }
+
+        private void showContinueHabitDialog(Habit habit) {
+            // Create custom layout for input
+            View dialogView = LayoutInflater.from(itemView.getContext()).inflate(R.layout.dialog_continue_habit, null);
+
+            EditText etNewTarget = dialogView.findViewById(R.id.etNewTarget);
+            TextView tvCurrentStreak = dialogView.findViewById(R.id.tvCurrentStreak);
+            TextView tvHabitName = dialogView.findViewById(R.id.tvHabitName);
+
+            // Set current information
+            tvHabitName.setText(habit.getName());
+            tvCurrentStreak.setText("Current streak: " + habit.getCurrent_count() + " days completed");
+            etNewTarget.setHint("Enter new target (e.g., 30)");
+
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(itemView.getContext())
+                    .setTitle("Set New Target")
+                    .setView(dialogView)
+                    .setIcon(R.drawable.ic_target_24)
+                    .setPositiveButton("Continue", (dialog, which) -> {
+                        String newTargetStr = etNewTarget.getText().toString().trim();
+                        if (!newTargetStr.isEmpty()) {
+                            try {
+                                int newTarget = Integer.parseInt(newTargetStr);
+                                if (newTarget > 0) {
+                                    continueHabitWithNewTarget(habit, newTarget);
+                                } else {
+                                    Toast.makeText(itemView.getContext(), "Please enter a valid target greater than 0", Toast.LENGTH_SHORT).show();
+                                    showContinueHabitDialog(habit); // Show dialog again
+                                }
+                            } catch (NumberFormatException e) {
+                                Toast.makeText(itemView.getContext(), "Please enter a valid number", Toast.LENGTH_SHORT).show();
+                                showContinueHabitDialog(habit); // Show dialog again
+                            }
+                        } else {
+                            Toast.makeText(itemView.getContext(), "Please enter a target", Toast.LENGTH_SHORT).show();
+                            showContinueHabitDialog(habit); // Show dialog again
+                        }
+                    })
+                    .setNegativeButton("Back", (dialog, which) -> {
+                        // Kembali ke dialog sebelumnya
+                        showStreakCompletionDialog(habit);
+                    })
+                    .setCancelable(false)
+                    .show();
+        }
+
+        /**
+         * Method untuk melanjutkan habit dengan target baru
+         */
+        private void continueHabitWithNewTarget(Habit habit, int newTarget) {
+            try {
+                // Update target tanpa reset current_count
+                ContentValues values = new ContentValues();
+                values.put("target_count", newTarget);
+                values.put("is_active", 1); // Pastikan tetap aktif
+
+                habit.setTarget_count(newTarget);
+                habit.setIs_active(true);
+
+                HabitHelper.instance.update(String.valueOf(habit.getId()), values);
+
+                // Update UI
+                tvHabitTarget.setText(String.valueOf(newTarget));
+                int newProgress = (int) ((habit.getCurrent_count() * 100.0f) / newTarget);
+                progressBar.setProgress(newProgress);
+
+                // Update status
+                tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge);
+                tvHabitStatus.setText("Active");
+
+                Toast.makeText(itemView.getContext(),
+                        "Great! Your new target is " + newTarget + " days. Keep going! 💪",
+                        Toast.LENGTH_LONG).show();
+
+                refreshSorting();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                Toast.makeText(itemView.getContext(),
+                        "Error updating habit target",
+                        Toast.LENGTH_SHORT).show();
+            }
+        }
+
+        /**
+         * Method untuk menyelesaikan habit dan menonaktifkannya
+         */
+        private void completeAndDeactivateHabit(Habit habit) {
+            try {
+                // Update habit menjadi tidak aktif dan reset current count
+                ContentValues values = new ContentValues();
+                values.put("is_active", 0);
+                values.put("current_count", 0); // Reset streak
+
+                habit.setIs_active(false);
+                habit.setCurrent_count(0);
+
+                HabitHelper.instance.update(String.valueOf(habit.getId()), values);
+
+                // Update UI
+                tvHabitCurrent.setText("0");
+                tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge_completed);
+                tvHabitStatus.setText("Completed");
+                progressBar.setProgress(100); // Show full progress as completed
+
+                // Disable buttons
+                btnFinishHabit.setEnabled(false);
+                btnSkipHabit.setEnabled(false);
+
+                // Update card background
+                setCardBackground(habit, true);
+
+                Toast.makeText(itemView.getContext(),
+                        "🎉 Habit completed successfully! You can reactivate it anytime from the menu.",
+                        Toast.LENGTH_LONG).show();
+
+                refreshSorting();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                Toast.makeText(itemView.getContext(),
+                        "Error completing habit",
+                        Toast.LENGTH_SHORT).show();
+            }
+        }
+
+        /**
+         * Method untuk update progress habit normal (belum mencapai target)
+         */
+        private void updateHabitProgress(Habit habit, int newCurrentCount) {
+            try {
+                ContentValues habitValues = new ContentValues();
+                habitValues.put("current_count", newCurrentCount);
+                habitValues.put("is_active", 1); // Tetap aktif
+
+                HabitHelper.instance.update(String.valueOf(habit.getId()), habitValues);
+
+                // Update UI
+                tvHabitCurrent.setText(String.valueOf(newCurrentCount));
+                int newProgress = (int) ((newCurrentCount * 100.0f) / habit.getTarget_count());
+                progressBar.setProgress(newProgress);
+
+                // Show encouraging message
+                int remaining = habit.getTarget_count() - newCurrentCount;
+                Toast.makeText(itemView.getContext(),
+                        "Great job! Only " + remaining + " more days to complete your streak! 🔥",
+                        Toast.LENGTH_SHORT).show();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                Toast.makeText(itemView.getContext(),
+                        "Error updating habit progress",
+                        Toast.LENGTH_SHORT).show();
+            }
+        }
     }
+
 }

@@ -335,7 +335,7 @@ public class HabitFormActivity extends AppCompatActivity {
         intent.putExtra(EXTRA_HABIT, habit);
 
         if (isEdit) {
-            // Update existing habit
+            // Update existing habit - jangan ubah current_count saat edit
             long result = habitHelper.update(String.valueOf(habit.getId()), values);
             if (result > 0) {
                 setResult(RESULT_UPDATE, intent);
@@ -345,10 +345,13 @@ public class HabitFormActivity extends AppCompatActivity {
                 Toast.makeText(this, "Failed to update habit", Toast.LENGTH_SHORT).show();
             }
         } else {
-            // Add new habit
+            // Add new habit - TAMBAH current_count untuk habit baru
+            values.put("current_count", 0); // PENTING: Tambah ini!
+
             long result = habitHelper.insert(values);
             if (result > 0) {
                 habit.setId((int) result);
+                habit.setCurrent_count(0); // Set di object juga
                 setResult(RESULT_ADD, intent);
                 Toast.makeText(this, "Habit added successfully!", Toast.LENGTH_SHORT).show();
                 finish();
@@ -357,10 +360,6 @@ public class HabitFormActivity extends AppCompatActivity {
             }
         }
     }
-
-    /**
-     * Show delete confirmation dialog
-     */
     private void showDeleteConfirmation() {
         // Cek berapa banyak logs yang akan dihapus
         int logCount = getHabitLogCount(habit.getId());
@@ -411,10 +410,7 @@ public class HabitFormActivity extends AppCompatActivity {
         }
 
         try {
-            // Step 1: Hapus semua habit logs terlebih dahulu
             int logsDeleted = (int) HabitLogHelper.instance.deleteByHabitId(String.valueOf(habit.getId()));
-
-            // Step 2: Hapus habit
             long habitDeleted = habitHelper.deleteById(String.valueOf(habit.getId()));
 
             if (habitDeleted > 0) {
