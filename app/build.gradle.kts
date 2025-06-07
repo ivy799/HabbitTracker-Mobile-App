@@ -51,4 +51,6 @@ dependencies {
     implementation ("com.squareup.okhttp3:okhttp:4.9.1")
     implementation ("com.squareup.picasso:picasso:2.71828")
     implementation ("com.google.android.material:material:1.9.0")
+    implementation ("androidx.core:core-splashscreen:1.0.1")
+
 }

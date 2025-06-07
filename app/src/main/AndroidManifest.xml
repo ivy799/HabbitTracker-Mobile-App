@@ -17,17 +17,20 @@
         android:theme="@style/Theme.HabbitTracker"
         tools:targetApi="31">
         <activity
-            android:name=".Activities.HabitFormActivity"
-            android:exported="false"/>
-        <activity
-            android:name=".Activities.MainActivity"
-            android:exported="true">
+            android:name=".Activities.LoadingActivity"
+            android:exported="true"
+            android:theme="@style/Theme.App.Loading">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".Activities.HabitFormActivity"
+            android:exported="false" />
+        <activity
+            android:name=".Activities.MainActivity"
+            android:exported="false"/>
     </application>
 
 </manifest>
