@@ -155,7 +155,10 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             tvHabitDescription.setText(habit.getDescription());
             tvHabitCategory.setText(habit.getCategory());
             tvHabitFrequency.setText(habit.getFrequency());
-            tvHabitStartDate.setText(habit.getStart_date().toString());
+            SimpleDateFormat format1 = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
+            String formattedDate = format1.format(habit.getStart_date());
+            tvHabitStartDate.setText(formattedDate);
+            tvHabitStartDate.setText(formattedDate);
             tvHabitTarget.setText(String.valueOf(habit.getTarget_count()));
             tvHabitCurrent.setText(String.valueOf(habit.getCurrent_count()));
             tvHabitStatus.setText(habit.getIs_active() ? "Active" : "Inactive");

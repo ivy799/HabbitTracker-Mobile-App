@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@+id/satu"
-        android:icon="@android:drawable/ic_menu_myplaces"
-        android:title="satu"/>
+        android:icon="@drawable/ic_settingss"
+        android:title="TODO" />
     <item android:id="@+id/nav_home"
-        android:icon="@android:drawable/ic_input_add" android:title="Home"/>
+        android:icon="@drawable/ic_home"
+        android:title="TODO" />
     <item android:id="@+id/tiga"
-        android:icon="@android:drawable/ic_menu_myplaces"
-        android:title="tiga"/>
+        android:icon="@drawable/ic_monitor"
+        android:title="TODO" />
 </menu>

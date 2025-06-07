@@ -1,0 +1,7 @@
+<!-- Tambahkan di res/values/styles.xml -->
+<style name="CustomActiveIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+    <item name="android:color">?attr/colorPrimary</item>
+    <item name="android:width">64dp</item>
+    <item name="android:height">32dp</item>
+    <item name="cornerRadius">16dp</item>
+</style>

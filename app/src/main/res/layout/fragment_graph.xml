@@ -69,7 +69,6 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnRefresh"
-                        style="@style/Widget.Material3.Button.Icon"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
                         android:backgroundTint="?attr/colorOnPrimary"
