@@ -11,11 +11,11 @@ import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
+import androidx.appcompat.app.AlertDialog;
+import android.content.DialogInterface;
 import androidx.annotation.NonNull;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.example.habbittracker.Database_config.Habit.HabitHelper;
 import com.example.habbittracker.Database_config.HabitLogs.HabitLogHelper;
 import com.example.habbittracker.Models.Habit;
@@ -464,27 +464,7 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 public void onClick(View v) {
                     ContentValues values = new ContentValues();
                     boolean isActivating = !habit.getIs_active();
-
-                    values.put("is_active", isActivating ? 1 : 0);
-                    values.put("current_count", 0);
-                    habit.setIs_active(isActivating);
-                    habit.setCurrent_count(0);
-                    HabitHelper.instance.update(String.valueOf(habit.getId()), values);
-
-                    if (!isActivating) {
-                        HabitLogHelper.instance.deleteByHabitId(String.valueOf(habit.getId()));
-                    }
-
-                    // Update UI
-                    tvHabitStatus.setBackgroundResource(isActivating ? R.drawable.habit_status_badge : R.drawable.habit_status_badge_inactive);
-                    tvHabitStatus.setText(isActivating ? "Active" : "Inactive");
-                    tvHabitCurrent.setText("0");
-                    progressBar.setProgress(0);
-                    btnFinishHabit.setEnabled(isActivating);
-                    btnSkipHabit.setEnabled(isActivating);
-
-                    // Refresh sorting
-                    refreshSorting();
+                    showMaterialConfirmationDialog(habit, isActivating);
                 }
             });
 
@@ -540,23 +520,70 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             }
         }
 
-        /**
-         * Update text tombol berdasarkan status
-         */
-        private void updateButtonText(Habit habit, boolean isCompletedForPeriod) {
-            if (!habit.getIs_active()) {
-                btnDeactivateHabit.setText("Activate");
-                btnFinishHabit.setText("Complete");
-                btnSkipHabit.setText("Skip");
-            } else if (isCompletedForPeriod) {
-                btnDeactivateHabit.setText("Disable");
-                btnFinishHabit.setText("Done");
-                btnSkipHabit.setText("Done");
-            } else {
-                btnDeactivateHabit.setText("Disable");
-                btnFinishHabit.setText("Complete");
-                btnSkipHabit.setText("Skip");
+        private void performHabitToggle(Habit habit, boolean isActivating) {
+            ContentValues values = new ContentValues();
+
+            values.put("is_active", isActivating ? 1 : 0);
+            values.put("current_count", 0);
+            habit.setIs_active(isActivating);
+            habit.setCurrent_count(0);
+            HabitHelper.instance.update(String.valueOf(habit.getId()), values);
+
+            if (!isActivating) {
+                HabitLogHelper.instance.deleteByHabitId(String.valueOf(habit.getId()));
             }
+
+            // Update UI
+            tvHabitStatus.setBackgroundResource(isActivating ? R.drawable.habit_status_badge : R.drawable.habit_status_badge_inactive);
+            tvHabitStatus.setText(isActivating ? "Active" : "Inactive");
+            tvHabitCurrent.setText("0");
+            progressBar.setProgress(0);
+            btnFinishHabit.setEnabled(isActivating);
+            btnSkipHabit.setEnabled(isActivating);
+
+            // Update button text
+            String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+            boolean isCompletedForPeriod = isHabitCompletedForPeriod(habit, today);
+            // Update card background
+            setCardBackground(habit, isCompletedForPeriod);
+
+            // Refresh sorting
+            refreshSorting();
+
+            // Show success message
+            String message = isActivating ?
+                    "Habit \"" + habit.getName() + "\" has been activated!" :
+                    "Habit \"" + habit.getName() + "\" has been disabled.";
+            Toast.makeText(itemView.getContext(), message, Toast.LENGTH_SHORT).show();
+        }
+
+        private void showMaterialConfirmationDialog(Habit habit, boolean isActivating) {
+            com.google.android.material.dialog.MaterialAlertDialogBuilder builder =
+                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(itemView.getContext());
+
+            if (isActivating) {
+                builder.setTitle("Activate Habit")
+                        .setMessage("Are you sure you want to activate \"" + habit.getName() + "\"?\n\n" +
+                                "This will reset your current progress to 0 and start tracking again.")
+                        .setIcon(R.drawable.ic_play_arrow_24);
+            } else {
+                builder.setTitle("Disable Habit")
+                        .setMessage("Are you sure you want to disable \"" + habit.getName() + "\"?\n\n" +
+                                "This will:\n" +
+                                "• Stop tracking this habit\n" +
+                                "• Reset your current progress to 0\n" +
+                                "• Delete all your habit logs\n\n" +
+                                "This action cannot be undone.")
+                        .setIcon(R.drawable.ic_pause_24);
+            }
+
+            builder.setPositiveButton(isActivating ? "Activate" : "Disable", (dialog, which) -> {
+                        performHabitToggle(habit, isActivating);
+                    })
+                    .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                    .show();
+
+
         }
     }
 }
