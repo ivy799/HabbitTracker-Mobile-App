@@ -2,11 +2,11 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@+id/satu"
         android:icon="@drawable/ic_settingss"
-        android:title="TODO" />
+        android:title="" />
     <item android:id="@+id/nav_home"
         android:icon="@drawable/ic_home"
-        android:title="TODO" />
+        android:title="" />
     <item android:id="@+id/tiga"
         android:icon="@drawable/ic_monitor"
-        android:title="TODO" />
+        android:title="" />
 </menu>
