@@ -53,15 +53,16 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             listHabits.add(habit);
         }
 
-        // Sort habits: incomplete habits first, completed/skipped habits last
+        // Sort habits dengan prioritas baru
         sortHabitsByCompletionStatus();
         notifyDataSetChanged();
     }
 
     /**
-     * Sort habits berdasarkan status completion untuk hari ini/minggu ini/bulan ini
-     * Habit yang belum complete/skip akan berada di atas
-     * Habit yang sudah complete/skip akan berada di bawah
+     * Sort habits dengan prioritas:
+     * 1. Inactive habits selalu paling bawah
+     * 2. Active & belum completed di atas
+     * 3. Active & sudah completed di tengah
      */
     private void sortHabitsByCompletionStatus() {
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
@@ -69,21 +70,22 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
         Collections.sort(listHabits, new Comparator<Habit>() {
             @Override
             public int compare(Habit habit1, Habit habit2) {
-                boolean habit1Completed = isHabitCompletedForPeriod(habit1, today);
-                boolean habit2Completed = isHabitCompletedForPeriod(habit2, today);
-
-                // Jika salah satu completed dan yang lain tidak, yang tidak completed di atas
-                if (habit1Completed != habit2Completed) {
-                    return habit1Completed ? 1 : -1; // completed habits go to bottom
-                }
-
-                // Jika status completion sama, sort berdasarkan prioritas lain:
-                // 1. Active habits di atas inactive habits
+                // Prioritas 1: Inactive habits selalu paling bawah
                 if (habit1.getIs_active() != habit2.getIs_active()) {
-                    return habit1.getIs_active() ? -1 : 1; // active habits go to top
+                    return habit1.getIs_active() ? -1 : 1; // inactive habits go to bottom
                 }
 
-                // 2. Sort berdasarkan nama (alphabetical)
+                // Prioritas 2: Untuk active habits, yang belum completed di atas
+                if (habit1.getIs_active() && habit2.getIs_active()) {
+                    boolean habit1Completed = isHabitCompletedForPeriod(habit1, today);
+                    boolean habit2Completed = isHabitCompletedForPeriod(habit2, today);
+
+                    if (habit1Completed != habit2Completed) {
+                        return habit1Completed ? 1 : -1; // completed habits go to bottom within active group
+                    }
+                }
+
+                // Prioritas 3: Sort berdasarkan nama (alphabetical)
                 return habit1.getName().compareToIgnoreCase(habit2.getName());
             }
         });
@@ -165,7 +167,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
 
     /**
      * Method untuk refresh sorting setelah ada perubahan status habit
-     * Panggil method ini setelah complete/skip habit
      */
     public void refreshSorting() {
         sortHabitsByCompletionStatus();
@@ -278,7 +279,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             tvHabitStartDate.setText(formattedDate);
             tvHabitTarget.setText(String.valueOf(habit.getTarget_count()));
             tvHabitCurrent.setText(String.valueOf(habit.getCurrent_count()));
-            tvHabitStatus.setText(habit.getIs_active() ? "Active" : "Inactive");
 
             // Hitung progress
             int progress = 0;
@@ -291,6 +291,9 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             boolean sudahSelesaiHariIni = false;
             boolean weeklyCooldownPassed = true;
             boolean monthlyCooldownPassed = true;
+
+            // Cek status completion untuk periode ini
+            boolean isCompletedForPeriod = isHabitCompletedForPeriod(habit, today);
 
             Cursor habitLog = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today);
             if (habitLog != null && habitLog.moveToFirst()) {
@@ -385,11 +388,21 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 e.printStackTrace();
             }
 
-            // Set background status badge
+            // WARNA PEMBEDA - Set background card berdasarkan status
+            setCardBackground(habit, isCompletedForPeriod);
+
+            // Set background status badge dengan warna yang sesuai
             if (habit.getIs_active()) {
-                tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge);
+                if (isCompletedForPeriod) {
+                    tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge_completed);
+                    tvHabitStatus.setText("Completed");
+                } else {
+                    tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge);
+                    tvHabitStatus.setText("Active");
+                }
             } else {
                 tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge_inactive);
+                tvHabitStatus.setText("Inactive");
             }
 
             // Atur state tombol
@@ -403,7 +416,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             }
             btnFinishHabit.setEnabled(canCompleteToday);
             btnSkipHabit.setEnabled(canCompleteToday);
-
             // Tombol Finish
             btnFinishHabit.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -507,6 +519,44 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                     }
                 }
             });
+        }
+
+        /**
+         * Set background card berdasarkan status habit
+         */
+        private void setCardBackground(Habit habit, boolean isCompletedForPeriod) {
+            if (!habit.getIs_active()) {
+                // Inactive - Abu-abu dengan opacity
+                itemView.setAlpha(0.6f);
+                itemView.setBackgroundResource(R.drawable.habit_card_inactive);
+            } else if (isCompletedForPeriod) {
+                // Completed - Hijau muda
+                itemView.setAlpha(1.0f);
+                itemView.setBackgroundResource(R.drawable.habit_card_completed);
+            } else {
+                // Active but not completed - Normal dengan border biru
+                itemView.setAlpha(1.0f);
+                itemView.setBackgroundResource(R.drawable.habit_card_active);
+            }
+        }
+
+        /**
+         * Update text tombol berdasarkan status
+         */
+        private void updateButtonText(Habit habit, boolean isCompletedForPeriod) {
+            if (!habit.getIs_active()) {
+                btnDeactivateHabit.setText("Activate");
+                btnFinishHabit.setText("Complete");
+                btnSkipHabit.setText("Skip");
+            } else if (isCompletedForPeriod) {
+                btnDeactivateHabit.setText("Disable");
+                btnFinishHabit.setText("Done");
+                btnSkipHabit.setText("Done");
+            } else {
+                btnDeactivateHabit.setText("Disable");
+                btnFinishHabit.setText("Complete");
+                btnSkipHabit.setText("Skip");
+            }
         }
     }
 }
