@@ -1,7 +1,8 @@
 package com.example.habbittracker.Activities;
 
+import android.content.Intent;
 import android.os.Bundle;
-import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -27,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0);
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
 
@@ -46,14 +47,6 @@ public class MainActivity extends AppCompatActivity {
     private void setupBottomNavigation() {
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation);
         bottomNavigationView.setSelectedItemId(R.id.nav_home);
-        ViewCompat.setOnApplyWindowInsetsListener(bottomNavigationView, (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            // Apply margin bottom sesuai system navigation bar
-            ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
-            params.bottomMargin = systemBars.bottom + 16; // 16dp original margin + system bar
-            v.setLayoutParams(params);
-            return insets;
-        });
         if (bottomNavigationView != null) {
             bottomNavigationView.setOnItemSelectedListener(item -> {
                 Fragment fragment = null;
@@ -80,5 +73,28 @@ public class MainActivity extends AppCompatActivity {
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         transaction.replace(R.id.fragment_container, fragment);
         transaction.commit();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == HabitFormActivity.REQUEST_UPDATE) {
+            if (resultCode == HabitFormActivity.RESULT_UPDATE) {
+                // Refresh data setelah update
+                Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+                if (currentFragment instanceof HomeFragment) {
+                    ((HomeFragment) currentFragment).refreshHabits();
+                }
+                Toast.makeText(this, "Habit updated successfully!", Toast.LENGTH_SHORT).show();
+            } else if (resultCode == HabitFormActivity.RESULT_DELETE) {
+                // Handle delete result
+                Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+                if (currentFragment instanceof HomeFragment) {
+                    ((HomeFragment) currentFragment).refreshHabits();
+                }
+                Toast.makeText(this, "Habit deleted successfully!", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 }

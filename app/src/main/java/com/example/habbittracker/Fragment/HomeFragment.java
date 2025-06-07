@@ -105,7 +105,9 @@ public class HomeFragment extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
-        habitHelper.close();
+        if (habitHelper != null) {
+            habitHelper.close();
+        }
     }
 
     @Override
@@ -154,12 +156,39 @@ public class HomeFragment extends Fragment {
 
     private void loadData() {
         new LoadHabitsAsync(requireContext(), habits -> {
-            if (!habits.isEmpty()) {
-                adapter.setListHabits(habits);
-            } else {
-                adapter.setListHabits(new ArrayList<>());
+            if (isAdded() && getActivity() != null) { // Check if fragment is still attached
+                if (habits != null && !habits.isEmpty()) {
+                    adapter.setListHabits(habits);
+                } else {
+                    adapter.setListHabits(new ArrayList<>());
+                }
             }
         }).execute();
+    }
+
+    /**
+     * Method untuk refresh habits - dipanggil dari MainActivity
+     * Ini adalah method yang dibutuhkan untuk onActivityResult di MainActivity
+     */
+    public void refreshHabits() {
+        if (isAdded() && getActivity() != null) {
+            loadData();
+        }
+    }
+
+    /**
+     * Method untuk refresh data secara manual (bisa dipanggil dari UI)
+     */
+    public void forceRefresh() {
+        if (isAdded() && getActivity() != null) {
+            // Show loading indicator if needed
+            loadData();
+
+            // Also refresh quote if needed
+            if (shouldFetchNewQuote()) {
+                fetchRandomQuote();
+            }
+        }
     }
 
     private void loadCachedQuote() {
@@ -184,7 +213,9 @@ public class HomeFragment extends Fragment {
 
     private void fetchRandomQuote() {
         if (!isNetworkAvailable()) {
-            Toast.makeText(requireContext(), "No internet connection", Toast.LENGTH_SHORT).show();
+            if (isAdded()) {
+                Toast.makeText(requireContext(), "No internet connection", Toast.LENGTH_SHORT).show();
+            }
             loadCachedQuote();
             return;
         }
@@ -197,43 +228,49 @@ public class HomeFragment extends Fragment {
         call.enqueue(new Callback<List<Quotes>>() {
             @Override
             public void onResponse(Call<List<Quotes>> call, Response<List<Quotes>> response) {
-                showQuoteLoading(false);
+                if (isAdded()) { // Check if fragment is still attached
+                    showQuoteLoading(false);
 
-                if (response.isSuccessful() && response.body() != null && !response.body().isEmpty()) {
-                    Quotes quote = response.body().get(0);
-                    String quoteText = quote.getQ();
-                    String author = quote.getA();
+                    if (response.isSuccessful() && response.body() != null && !response.body().isEmpty()) {
+                        Quotes quote = response.body().get(0);
+                        String quoteText = quote.getQ();
+                        String author = quote.getA();
 
-                    displayQuote(quoteText, author);
-                    saveQuoteToCache(quoteText, author);
-                } else {
-                    Toast.makeText(requireContext(), "Failed to load quote", Toast.LENGTH_SHORT).show();
-                    loadCachedQuote();
+                        displayQuote(quoteText, author);
+                        saveQuoteToCache(quoteText, author);
+                    } else {
+                        Toast.makeText(requireContext(), "Failed to load quote", Toast.LENGTH_SHORT).show();
+                        loadCachedQuote();
+                    }
                 }
             }
 
             @Override
             public void onFailure(Call<List<Quotes>> call, Throwable t) {
-                showQuoteLoading(false);
-                Toast.makeText(requireContext(), "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-                loadCachedQuote();
+                if (isAdded()) { // Check if fragment is still attached
+                    showQuoteLoading(false);
+                    Toast.makeText(requireContext(), "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    loadCachedQuote();
+                }
             }
         });
     }
 
     private void displayQuote(String quoteText, String author) {
-        if (tvQuote != null && tvAuthor != null) {
+        if (tvQuote != null && tvAuthor != null && isAdded()) {
             tvQuote.setText("\"" + quoteText + "\"");
             tvAuthor.setText("— " + author);
         }
     }
 
     private void saveQuoteToCache(String quoteText, String author) {
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString(KEY_LAST_QUOTE_TEXT, quoteText);
-        editor.putString(KEY_LAST_QUOTE_AUTHOR, author);
-        editor.putLong(KEY_LAST_FETCH_TIME, System.currentTimeMillis());
-        editor.apply();
+        if (sharedPreferences != null) {
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putString(KEY_LAST_QUOTE_TEXT, quoteText);
+            editor.putString(KEY_LAST_QUOTE_AUTHOR, author);
+            editor.putLong(KEY_LAST_FETCH_TIME, System.currentTimeMillis());
+            editor.apply();
+        }
     }
 
     private void showDefaultQuote() {
@@ -241,16 +278,20 @@ public class HomeFragment extends Fragment {
     }
 
     private void showQuoteLoading(boolean show) {
-        if (progressBarQuote != null) {
+        if (progressBarQuote != null && isAdded()) {
             progressBarQuote.setVisibility(show ? View.VISIBLE : View.GONE);
         }
     }
 
     private boolean isNetworkAvailable() {
-        ConnectivityManager connectivityManager =
-                (ConnectivityManager) requireActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
-        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+        try {
+            ConnectivityManager connectivityManager =
+                    (ConnectivityManager) requireActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+            return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     @Override
@@ -260,12 +301,21 @@ public class HomeFragment extends Fragment {
         if (requestCode == REQUEST_ADD) {
             if (resultCode == HabitFormActivity.RESULT_ADD) {
                 loadData();
+                if (isAdded()) {
+                    Toast.makeText(requireContext(), "Habit added successfully!", Toast.LENGTH_SHORT).show();
+                }
             }
         } else if (requestCode == REQUEST_UPDATE) {
             if (resultCode == HabitFormActivity.RESULT_UPDATE) {
                 loadData();
+                if (isAdded()) {
+                    Toast.makeText(requireContext(), "Habit updated successfully!", Toast.LENGTH_SHORT).show();
+                }
             } else if (resultCode == HabitFormActivity.RESULT_DELETE) {
                 loadData();
+                if (isAdded()) {
+                    Toast.makeText(requireContext(), "Habit deleted successfully!", Toast.LENGTH_SHORT).show();
+                }
             }
         }
     }
@@ -273,6 +323,10 @@ public class HomeFragment extends Fragment {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        // Clean up resources
+        if (habitHelper != null) {
+            habitHelper.close();
+        }
     }
 
     private static class LoadHabitsAsync {
@@ -290,28 +344,39 @@ public class HomeFragment extends Fragment {
 
             executor.execute(() -> {
                 Context context = weakContext.get();
+                ArrayList<Habit> habits = new ArrayList<>();
+
                 if (context != null) {
-                    HabitHelper studentHelper = HabitHelper.getInstance(context);
-                    studentHelper.open();
-
-                    Cursor habitCursor = studentHelper.queryAll();
-                    ArrayList<Habit> habits = null;
                     try {
-                        habits = HabitMappingHelper.mapCursorToArrayList(habitCursor);
-                    } catch (ParseException e) {
-                        throw new RuntimeException(e);
-                    }
+                        HabitHelper habitHelper = HabitHelper.getInstance(context);
+                        habitHelper.open();
 
-                    habitCursor.close();
-
-                    ArrayList<Habit> finalHabits = habits;
-                    handler.post(() -> {
-                        LoadHabitsCallback callback = weakCallback.get();
-                        if (callback != null) {
-                            callback.postExecute(finalHabits);
+                        Cursor habitCursor = habitHelper.queryAll();
+                        if (habitCursor != null) {
+                            try {
+                                habits = HabitMappingHelper.mapCursorToArrayList(habitCursor);
+                            } catch (ParseException e) {
+                                e.printStackTrace();
+                                habits = new ArrayList<>();
+                            } finally {
+                                habitCursor.close();
+                            }
                         }
-                    });
+
+                        habitHelper.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        habits = new ArrayList<>();
+                    }
                 }
+
+                ArrayList<Habit> finalHabits = habits;
+                handler.post(() -> {
+                    LoadHabitsCallback callback = weakCallback.get();
+                    if (callback != null) {
+                        callback.postExecute(finalHabits);
+                    }
+                });
             });
         }
 

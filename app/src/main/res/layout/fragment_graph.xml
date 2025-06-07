@@ -148,7 +148,7 @@
                         android:layout_gravity="center"
                         android:layout_marginTop="4dp"
                         android:fontFamily="sans-serif"
-                        android:text="Total Habits"
+                        android:text="Habits"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="12sp" />
                 </LinearLayout>
