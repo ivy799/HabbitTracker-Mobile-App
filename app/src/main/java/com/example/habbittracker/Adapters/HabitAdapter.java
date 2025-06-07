@@ -24,6 +24,8 @@ import com.google.android.material.button.MaterialButton;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Locale;
 
@@ -51,6 +53,122 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             listHabits.add(habit);
         }
 
+        // Sort habits: incomplete habits first, completed/skipped habits last
+        sortHabitsByCompletionStatus();
+        notifyDataSetChanged();
+    }
+
+    /**
+     * Sort habits berdasarkan status completion untuk hari ini/minggu ini/bulan ini
+     * Habit yang belum complete/skip akan berada di atas
+     * Habit yang sudah complete/skip akan berada di bawah
+     */
+    private void sortHabitsByCompletionStatus() {
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+
+        Collections.sort(listHabits, new Comparator<Habit>() {
+            @Override
+            public int compare(Habit habit1, Habit habit2) {
+                boolean habit1Completed = isHabitCompletedForPeriod(habit1, today);
+                boolean habit2Completed = isHabitCompletedForPeriod(habit2, today);
+
+                // Jika salah satu completed dan yang lain tidak, yang tidak completed di atas
+                if (habit1Completed != habit2Completed) {
+                    return habit1Completed ? 1 : -1; // completed habits go to bottom
+                }
+
+                // Jika status completion sama, sort berdasarkan prioritas lain:
+                // 1. Active habits di atas inactive habits
+                if (habit1.getIs_active() != habit2.getIs_active()) {
+                    return habit1.getIs_active() ? -1 : 1; // active habits go to top
+                }
+
+                // 2. Sort berdasarkan nama (alphabetical)
+                return habit1.getName().compareToIgnoreCase(habit2.getName());
+            }
+        });
+    }
+
+    /**
+     * Cek apakah habit sudah completed/skipped untuk periode yang sesuai
+     */
+    private boolean isHabitCompletedForPeriod(Habit habit, String today) {
+        // Cek apakah sudah ada log untuk hari ini
+        boolean completedToday = false;
+        boolean weeklyCooldownActive = false;
+        boolean monthlyCooldownActive = false;
+
+        // Cek log hari ini
+        Cursor habitLog = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today);
+        if (habitLog != null && habitLog.moveToFirst()) {
+            int statusColumnIndex = habitLog.getColumnIndex("status");
+            if (statusColumnIndex != -1) {
+                int status = habitLog.getInt(statusColumnIndex);
+                completedToday = (status == 1 || status == 2); // completed or skipped
+            }
+            habitLog.close();
+        }
+
+        // Untuk daily habits, cukup cek hari ini
+        if (habit.getFrequency().equalsIgnoreCase("daily")) {
+            return completedToday;
+        }
+
+        // Untuk weekly habits, cek cooldown
+        if (habit.getFrequency().equalsIgnoreCase("weekly")) {
+            Cursor lastWeeklyLog = HabitLogHelper.instance.queryLastCompletedLogByHabitId(habit.getId());
+            if (lastWeeklyLog != null && lastWeeklyLog.moveToFirst()) {
+                int logDateColIndex = lastWeeklyLog.getColumnIndex("log_date");
+                if (logDateColIndex >= 0) {
+                    String lastLogDate = lastWeeklyLog.getString(logDateColIndex);
+                    try {
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                        Date lastDate = sdf.parse(lastLogDate);
+                        Date now = sdf.parse(today);
+                        long diffMillis = now.getTime() - lastDate.getTime();
+                        long diffDays = diffMillis / (1000 * 60 * 60 * 24);
+                        weeklyCooldownActive = diffDays < 7; // still in cooldown
+                    } catch (Exception e) {
+                        weeklyCooldownActive = false;
+                    }
+                }
+                lastWeeklyLog.close();
+            }
+            return completedToday || weeklyCooldownActive;
+        }
+
+        // Untuk monthly habits, cek cooldown
+        if (habit.getFrequency().equalsIgnoreCase("monthly")) {
+            Cursor lastMonthlyLog = HabitLogHelper.instance.queryLastCompletedLogByHabitId(habit.getId());
+            if (lastMonthlyLog != null && lastMonthlyLog.moveToFirst()) {
+                int logDateColIndex = lastMonthlyLog.getColumnIndex("log_date");
+                if (logDateColIndex >= 0) {
+                    String lastLogDate = lastMonthlyLog.getString(logDateColIndex);
+                    try {
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                        Date lastDate = sdf.parse(lastLogDate);
+                        Date now = sdf.parse(today);
+                        long diffMillis = now.getTime() - lastDate.getTime();
+                        long diffDays = diffMillis / (1000 * 60 * 60 * 24);
+                        monthlyCooldownActive = diffDays < 30; // still in cooldown
+                    } catch (Exception e) {
+                        monthlyCooldownActive = false;
+                    }
+                }
+                lastMonthlyLog.close();
+            }
+            return completedToday || monthlyCooldownActive;
+        }
+
+        return completedToday;
+    }
+
+    /**
+     * Method untuk refresh sorting setelah ada perubahan status habit
+     * Panggil method ini setelah complete/skip habit
+     */
+    public void refreshSorting() {
+        sortHabitsByCompletionStatus();
         notifyDataSetChanged();
     }
 
@@ -158,7 +276,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             SimpleDateFormat format1 = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
             String formattedDate = format1.format(habit.getStart_date());
             tvHabitStartDate.setText(formattedDate);
-            tvHabitStartDate.setText(formattedDate);
             tvHabitTarget.setText(String.valueOf(habit.getTarget_count()));
             tvHabitCurrent.setText(String.valueOf(habit.getCurrent_count()));
             tvHabitStatus.setText(habit.getIs_active() ? "Active" : "Inactive");
@@ -182,6 +299,7 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                     int status = habitLog.getInt(statusColumnIndex);
                     sudahSelesaiHariIni = (status == 1 || status == 2);
                 }
+                habitLog.close();
             }
 
             // Cek cooldown untuk weekly dan monthly
@@ -320,6 +438,9 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
 
                             btnFinishHabit.setEnabled(false);
                             btnSkipHabit.setEnabled(false);
+
+                            // Refresh sorting untuk memindahkan habit yang completed ke bawah
+                            refreshSorting();
                         }
                     }
                 }
@@ -349,6 +470,9 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                     progressBar.setProgress(0);
                     btnFinishHabit.setEnabled(isActivating);
                     btnSkipHabit.setEnabled(isActivating);
+
+                    // Refresh sorting
+                    refreshSorting();
                 }
             });
 
@@ -371,6 +495,9 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                             Toast.makeText(itemView.getContext(),
                                     "Habit skipped for today. Your streak is preserved!",
                                     Toast.LENGTH_SHORT).show();
+
+                            // Refresh sorting untuk memindahkan habit yang skipped ke bawah
+                            refreshSorting();
                         } else {
                             btnSkipHabit.setEnabled(false);
                             Toast.makeText(itemView.getContext(),
