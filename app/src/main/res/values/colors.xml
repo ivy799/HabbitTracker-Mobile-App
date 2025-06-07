@@ -15,5 +15,7 @@
     <color name="warning_light">#FFF3E0</color>
     <color name="error_color">#E74C3C</color>
     <color name="error_light">#FDEDEC</color>
+    <color name="background_color">#F8FAFC</color>
+    <color name="white_20">#33FFFFFF</color>
 
 </resources>

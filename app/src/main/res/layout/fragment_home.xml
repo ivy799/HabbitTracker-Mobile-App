@@ -16,6 +16,7 @@
         app:cardCornerRadius="16dp"
         app:cardElevation="8dp"
         app:strokeWidth="0dp"
+        app:cardBackgroundColor="?attr/colorSurface"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -23,90 +24,165 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/quote_gradient_bg"
-            android:orientation="vertical"
-            android:padding="20dp">
+            android:orientation="vertical">
 
-            <!-- Header with icon and refresh button -->
+            <!-- Header Section -->
             <LinearLayout
+                android:id="@+id/headerSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:layout_marginBottom="16dp">
+                android:orientation="vertical"
+                android:paddingHorizontal="20dp"
+                android:paddingTop="24dp"
+                android:paddingBottom="16dp">
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_quote"
-                    android:alpha="0.9"
-                    app:tint="@android:color/white" />
-
-                <TextView
-                    android:layout_width="0dp"
+                <!-- Welcome Text with Add Button -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="12dp"
-                    android:text="Daily Inspiration"
-                    android:textColor="@android:color/white"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:alpha="0.9" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="8dp">
 
-                <ImageView
-                    android:id="@+id/btnRefreshQuote"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:background="@drawable/ripple_circle_white"
-                    android:padding="4dp"
-                    android:src="@drawable/ic_refresh"
-                    android:alpha="0.8"
-                    android:clickable="true"
-                    android:focusable="true"
-                    app:tint="@android:color/white" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Welcome! 👋"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="24sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Ready to build great habits today?"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="16sp"
+                            android:alpha="0.8"
+                            android:layout_marginTop="4dp" />
+
+                    </LinearLayout>
+
+                    <!-- Add Habit Button -->
+                    <com.google.android.material.floatingactionbutton.FloatingActionButton
+                        android:id="@+id/fab_add"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:src="@drawable/ic_add_24"
+                        android:contentDescription="Add new habit"
+                        app:fabSize="normal"
+                        app:backgroundTint="?attr/colorPrimary"
+                        app:tint="?attr/colorOnPrimary"
+                        app:elevation="8dp"
+                        app:borderWidth="0dp" />
+
+                </LinearLayout>
+
             </LinearLayout>
 
-            <!-- Quote Text -->
-            <TextView
-                android:id="@+id/tvQuote"
+            <!-- Quote Section -->
+            <LinearLayout
+                android:id="@+id/quoteSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:fontFamily="serif"
-                android:gravity="start"
-                android:lineSpacingExtra="2dp"
-                android:text="The secret of getting ahead is getting started"
-                android:textColor="@android:color/white"
-                android:textSize="16sp"
-                android:textStyle="italic"
-                android:minLines="2"
-                android:maxLines="4"
-                android:ellipsize="end" />
+                android:orientation="vertical"
+                android:paddingHorizontal="20dp"
+                android:paddingBottom="24dp">
 
-            <!-- Author -->
-            <TextView
-                android:id="@+id/tvAuthor"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="end"
-                android:text="— Mark Twain"
-                android:textColor="@color/white_80"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                <!-- Quote Header dengan Refresh Button -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
 
-            <!-- Progress Bar for loading quote -->
-            <ProgressBar
-                android:id="@+id/progressBarQuote"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_marginTop="8dp"
-                android:visibility="gone"
-                android:indeterminateTint="@android:color/white" />
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_quote"
+                        android:alpha="0.7"
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="Daily Inspiration"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:alpha="0.8" />
+
+                    <!-- Refresh Button -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="2dp"
+                        app:cardBackgroundColor="?attr/colorSurfaceVariant"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?android:attr/selectableItemBackgroundBorderless">
+
+                        <ImageView
+                            android:id="@+id/btnRefreshQuote"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_refresh"
+                            android:alpha="0.8"
+                            app:tint="?attr/colorOnSurfaceVariant" />
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Progress Bar untuk loading quote -->
+                    <ProgressBar
+                        android:id="@+id/progressBarQuote"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_marginStart="8dp"
+                        android:visibility="gone"
+                        android:indeterminateTint="?attr/colorPrimary" />
+
+                </LinearLayout>
+
+                <!-- Quote Text -->
+                <TextView
+                    android:id="@+id/tv_quote"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="The secret of getting ahead is getting started"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="16sp"
+                    android:textStyle="italic"
+                    android:gravity="center"
+                    android:lineSpacingExtra="2dp"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Quote Author -->
+                <TextView
+                    android:id="@+id/tv_quote_author"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="— Mark Twain"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="14sp"
+                    android:gravity="center"
+                    android:alpha="0.7" />
+
+            </LinearLayout>
         </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
 
+    </com.google.android.material.card.MaterialCardView>
     <!-- RecyclerView for Habits -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_habits"
@@ -122,18 +198,46 @@
         app:layout_constraintEnd_toEndOf="parent"
         tools:listitem="@layout/habit_item" />
 
-    <!-- Floating Action Button -->
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        android:id="@+id/fab_add"
-        android:layout_width="wrap_content"
+    <!-- Empty State (initially hidden, show when no habits) -->
+    <LinearLayout
+        android:id="@+id/emptyStateLayout"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:text="Add Habit"
-        app:icon="@android:drawable/ic_input_add"
-        app:backgroundTint="@color/primary_color"
-        app:iconTint="@android:color/white"
-        android:textColor="@android:color/white"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingHorizontal="40dp"
+        android:paddingVertical="60dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/quoteCard"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:src="@drawable/ic_empty_habits"
+            android:alpha="0.6"
+            app:tint="@color/text_secondary"
+            android:layout_marginBottom="24dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="No habits yet"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Start building better habits today!\nTap the + button above to create your first habit."
+            android:textColor="@color/text_secondary"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:lineSpacingExtra="2dp" />
+
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

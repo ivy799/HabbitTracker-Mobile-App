@@ -13,6 +13,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -33,6 +34,8 @@ import com.example.habbittracker.Models.Habit;
 import com.example.habbittracker.Models.Quotes;
 import com.example.habbittracker.R;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 import java.lang.ref.WeakReference;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -50,7 +53,7 @@ public class HomeFragment extends Fragment {
 
     // Views
     private RecyclerView rvHabit;
-    private ExtendedFloatingActionButton fabAdd;
+    private FloatingActionButton fabAdd;
     private TextView tvQuote, tvAuthor;
     private ImageView btnRefreshQuote;
     private ProgressBar progressBarQuote;
@@ -58,6 +61,7 @@ public class HomeFragment extends Fragment {
     // Adapters and Helpers
     private HabitAdapter adapter;
     private HabitHelper habitHelper;
+    private LinearLayout emptyStateLayout;
 
     // Quote caching
     private SharedPreferences sharedPreferences;
@@ -129,10 +133,11 @@ public class HomeFragment extends Fragment {
     private void initViews(View view) {
         rvHabit = view.findViewById(R.id.rv_habits);
         fabAdd = view.findViewById(R.id.fab_add);
-        tvQuote = view.findViewById(R.id.tvQuote);
-        tvAuthor = view.findViewById(R.id.tvAuthor);
+        tvQuote = view.findViewById(R.id.tv_quote);
+        tvAuthor = view.findViewById(R.id.tv_quote_author);
         btnRefreshQuote = view.findViewById(R.id.btnRefreshQuote);
-        progressBarQuote = view.findViewById(R.id.progressBarQuote);
+        progressBarQuote = view.findViewById(R.id.progressBar);
+        emptyStateLayout = view.findViewById(R.id.emptyStateLayout);
     }
 
     private void setupRecyclerView() {
@@ -156,11 +161,16 @@ public class HomeFragment extends Fragment {
 
     private void loadData() {
         new LoadHabitsAsync(requireContext(), habits -> {
-            if (isAdded() && getActivity() != null) { // Check if fragment is still attached
+            if (isAdded() && getActivity() != null) {
                 if (habits != null && !habits.isEmpty()) {
                     adapter.setListHabits(habits);
+                    rvHabit.setVisibility(View.VISIBLE);
+                    emptyStateLayout.setVisibility(View.GONE);
+
                 } else {
                     adapter.setListHabits(new ArrayList<>());
+                    rvHabit.setVisibility(View.GONE);
+                    emptyStateLayout.setVisibility(View.VISIBLE);
                 }
             }
         }).execute();
