@@ -282,7 +282,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             }
             btnFinishHabit.setEnabled(canCompleteToday);
             btnSkipHabit.setEnabled(canCompleteToday);
-            btnDeactivateHabit.setText(habit.getIs_active() ? "Disable" : "Activate");
 
             // Tombol Finish
             btnFinishHabit.setOnClickListener(new View.OnClickListener() {
@@ -347,7 +346,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                     progressBar.setProgress(0);
                     btnFinishHabit.setEnabled(isActivating);
                     btnSkipHabit.setEnabled(isActivating);
-                    btnDeactivateHabit.setText(isActivating ? "Disable" : "Activate");
                 }
             });
 
