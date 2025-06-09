@@ -28,21 +28,43 @@ import com.google.android.material.button.MaterialButton;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.Locale;
 
-public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHolder> {
-    private final ArrayList<Habit> listHabits = new ArrayList<>();
+public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+    private static final int TYPE_HEADER = 0;
+    private static final int TYPE_ITEM = 1;
+
     private final Activity activity;
+    private final ArrayList<Object> displayList = new ArrayList<>();
+    private ArrayList<Habit> originalHabits = new ArrayList<>();
+
+    // Section titles
+    private static final String TITLE_ACTIVE = "Active";
+    private static final String TITLE_COMPLETED = "Completed Today";
+    private static final String TITLE_INACTIVE = "Inactive";
+
+    // Tambahkan listener untuk event semua habit aktif selesai hari ini
+    public interface OnAllHabitsCompletedListener {
+        void onAllHabitsCompleted();
+    }
+    private OnAllHabitsCompletedListener allHabitsCompletedListener;
+
+    public void setOnAllHabitsCompletedListener(OnAllHabitsCompletedListener listener) {
+        this.allHabitsCompletedListener = listener;
+    }
 
     public HabitAdapter(Activity activity) {
         this.activity = activity;
     }
 
     public void setListHabits(ArrayList<Habit> habits) {
-        listHabits.clear();
+        originalHabits = new ArrayList<>(habits);
+
+        ArrayList<Habit> active = new ArrayList<>();
+        ArrayList<Habit> completed = new ArrayList<>();
+        ArrayList<Habit> inactive = new ArrayList<>();
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
         for (Habit habit : habits) {
             // Refresh dari database untuk memastikan data terbaru
@@ -54,51 +76,88 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 }
                 cursor.close();
             }
-            listHabits.add(habit);
+            if (!habit.getIs_active()) {
+                inactive.add(habit);
+            } else if (isHabitCompletedForPeriod(habit, today)) {
+                completed.add(habit);
+            } else {
+                active.add(habit);
+            }
         }
 
-        // Sort habits dengan prioritas baru
-        sortHabitsByCompletionStatus();
+        displayList.clear();
+        if (!active.isEmpty()) {
+            displayList.add(TITLE_ACTIVE);
+            displayList.addAll(active);
+        }
+        if (!completed.isEmpty()) {
+            displayList.add(TITLE_COMPLETED);
+            displayList.addAll(completed);
+        }
+        if (!inactive.isEmpty()) {
+            displayList.add(TITLE_INACTIVE);
+            displayList.addAll(inactive);
+        }
         notifyDataSetChanged();
+
+        // Cek jika semua habit aktif sudah selesai
+        boolean hasActiveHabit = false;
+        for (Habit h : habits) {
+            if (h.getIs_active()) {
+                hasActiveHabit = true;
+                break;
+            }
+        }
+        if (hasActiveHabit && active.isEmpty() && allHabitsCompletedListener != null) {
+            allHabitsCompletedListener.onAllHabitsCompleted();
+        }
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        return displayList.get(position) instanceof String ? TYPE_HEADER : TYPE_ITEM;
+    }
+
+    @NonNull
+    @Override
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        if (viewType == TYPE_HEADER) {
+            View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_section_header, parent, false);
+            return new HeaderViewHolder(view);
+        } else {
+            View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.habit_item, parent, false);
+            return new HabitViewHolder(view);
+        }
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+        if (holder.getItemViewType() == TYPE_HEADER) {
+            ((HeaderViewHolder) holder).bind((String) displayList.get(position));
+        } else {
+            ((HabitViewHolder) holder).bind((Habit) displayList.get(position));
+        }
+    }
+
+    @Override
+    public int getItemCount() {
+        return displayList.size();
     }
 
     private void sortHabitsByCompletionStatus() {
-        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-
-        Collections.sort(listHabits, new Comparator<Habit>() {
-            @Override
-            public int compare(Habit habit1, Habit habit2) {
-                // Prioritas 1: Inactive habits selalu paling bawah
-                if (habit1.getIs_active() != habit2.getIs_active()) {
-                    return habit1.getIs_active() ? -1 : 1; // inactive habits go to bottom
-                }
-
-                // Prioritas 2: Untuk active habits, yang belum completed di atas
-                if (habit1.getIs_active() && habit2.getIs_active()) {
-                    boolean habit1Completed = isHabitCompletedForPeriod(habit1, today);
-                    boolean habit2Completed = isHabitCompletedForPeriod(habit2, today);
-
-                    if (habit1Completed != habit2Completed) {
-                        return habit1Completed ? 1 : -1; // completed habits go to bottom within active group
-                    }
-                }
-
-                // Prioritas 3: Sort berdasarkan nama (alphabetical)
-                return habit1.getName().compareToIgnoreCase(habit2.getName());
-            }
-        });
+        // Sorting logic is now handled in setListHabits
     }
 
     /**
      * Cek apakah habit sudah completed/skipped untuk periode yang sesuai
      */
     private boolean isHabitCompletedForPeriod(Habit habit, String today) {
-        // Cek apakah sudah ada log untuk hari ini
         boolean completedToday = false;
         boolean weeklyCooldownActive = false;
         boolean monthlyCooldownActive = false;
 
-        // Cek log hari ini
         Cursor habitLog = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today);
         if (habitLog != null && habitLog.moveToFirst()) {
             int statusColumnIndex = habitLog.getColumnIndex("status");
@@ -109,12 +168,10 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             habitLog.close();
         }
 
-        // Untuk daily habits, cukup cek hari ini
         if (habit.getFrequency().equalsIgnoreCase("daily")) {
             return completedToday;
         }
 
-        // Untuk weekly habits, cek cooldown
         if (habit.getFrequency().equalsIgnoreCase("weekly")) {
             Cursor lastWeeklyLog = HabitLogHelper.instance.queryLastCompletedLogByHabitId(habit.getId());
             if (lastWeeklyLog != null && lastWeeklyLog.moveToFirst()) {
@@ -137,7 +194,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             return completedToday || weeklyCooldownActive;
         }
 
-        // Untuk monthly habits, cek cooldown
         if (habit.getFrequency().equalsIgnoreCase("monthly")) {
             Cursor lastMonthlyLog = HabitLogHelper.instance.queryLastCompletedLogByHabitId(habit.getId());
             if (lastMonthlyLog != null && lastMonthlyLog.moveToFirst()) {
@@ -167,25 +223,18 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
      * Method untuk refresh sorting setelah ada perubahan status habit
      */
     public void refreshSorting() {
-        sortHabitsByCompletionStatus();
-        notifyDataSetChanged();
+        setListHabits(originalHabits);
     }
 
-    @NonNull
-    @Override
-    public HabitAdapter.HabitViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.habit_item, parent, false);
-        return new HabitViewHolder(view);
-    }
-
-    @Override
-    public void onBindViewHolder(@NonNull HabitAdapter.HabitViewHolder holder, int position) {
-        holder.bind(listHabits.get(position));
-    }
-
-    @Override
-    public int getItemCount() {
-        return listHabits.size();
+    class HeaderViewHolder extends RecyclerView.ViewHolder {
+        private final TextView tvHeader;
+        public HeaderViewHolder(@NonNull View itemView) {
+            super(itemView);
+            tvHeader = itemView.findViewById(R.id.tvSectionHeader);
+        }
+        public void bind(String header) {
+            tvHeader.setText(header);
+        }
     }
 
     class HabitViewHolder extends RecyclerView.ViewHolder {
@@ -202,7 +251,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
         final ImageButton btnToggleDetails;
         final ConstraintLayout detailsSection;
 
-        // State untuk dropdown
         private boolean isExpanded = false;
 
         public HabitViewHolder(@NonNull View itemView) {
@@ -223,8 +271,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             this.detailsSection = itemView.findViewById(R.id.detailsSection);
             this.btnEditHabit = itemView.findViewById(R.id.btnEditHabit);
 
-
-            // Setup dropdown toggle
             setupDropdownToggle();
         }
 
@@ -241,19 +287,12 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             isExpanded = !isExpanded;
 
             if (isExpanded) {
-                // Tampilkan detail section
                 detailsSection.setVisibility(View.VISIBLE);
-
-                // Animasi rotasi tombol dropdown
                 ObjectAnimator rotation = ObjectAnimator.ofFloat(btnToggleDetails, "rotation", 0f, 180f);
                 rotation.setDuration(200);
                 rotation.start();
-
             } else {
-                // Sembunyikan detail section
                 detailsSection.setVisibility(View.GONE);
-
-                // Animasi rotasi tombol dropdown kembali
                 ObjectAnimator rotation = ObjectAnimator.ofFloat(btnToggleDetails, "rotation", 180f, 0f);
                 rotation.setDuration(200);
                 rotation.start();
@@ -392,7 +431,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 e.printStackTrace();
             }
 
-            // Tag/status & warna card
             setCardBackground(habit, sudahSelesaiHariIni);
 
             if (habit.getIs_active()) {
@@ -408,7 +446,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 tvHabitStatus.setText("Inactive");
             }
 
-            // Tombol Complete dan Skip: enable jika belum "completed/skipped" hari ini, kecuali jika sudah completed, tombol Complete jadi "Undo Complete" dan tetap bisa diklik
             boolean canCompleteToday;
             if (habit.getFrequency().equalsIgnoreCase("weekly")) {
                 canCompleteToday = habit.getIs_active() && !sudahSelesaiHariIni && weeklyCooldownPassed;
@@ -418,18 +455,16 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 canCompleteToday = habit.getIs_active() && !sudahSelesaiHariIni;
             }
 
-            // ---- TOMBOL COMPLETE ----
             if (isCompletedToday) {
                 btnFinishHabit.setEnabled(true);
                 btnFinishHabit.setOnClickListener(v -> {
                     undoHabitLog(habit, today);
-                    bind(habit);
+                    refreshSorting();
                 });
                 btnSkipHabit.setEnabled(false);
             } else if (canCompleteToday) {
                 btnFinishHabit.setEnabled(true);
                 btnFinishHabit.setOnClickListener(v -> {
-                    // Insert completion log
                     ContentValues values = new ContentValues();
                     values.put("habit_id", habit.getId());
                     values.put("log_date", today);
@@ -443,21 +478,17 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                         showStreakCompletionDialog(habit);
                     } else {
                         updateHabitProgress(habit, newCurrentCount);
+                        refreshSorting();
                     }
-                    // Setelah complete, bind ulang supaya tombol berubah menjadi "Undo Complete"
-                    bind(habit);
                 });
                 btnSkipHabit.setEnabled(true);
             } else {
-                // Sudah skip hari ini atau tidak bisa di-complete
                 btnFinishHabit.setEnabled(false);
                 btnFinishHabit.setOnClickListener(null);
                 btnSkipHabit.setEnabled(false);
             }
 
-            // ---- TOMBOL SKIP ----
             btnSkipHabit.setOnClickListener(v -> {
-                // Tampilkan dialog konfirmasi sebelum skip
                 new androidx.appcompat.app.AlertDialog.Builder(itemView.getContext())
                         .setTitle("Skip Habit")
                         .setMessage("Are you sure you want to skip this habit for today? Your streak will be preserved.")
@@ -475,16 +506,12 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                                     "Habit skipped for today. Your streak is preserved!",
                                     Toast.LENGTH_SHORT).show();
 
-                            // Refresh sorting untuk memindahkan habit yang skipped ke bawah
                             refreshSorting();
-                            // bind ulang agar update state UI
-                            bind(habit);
                         })
                         .setNegativeButton("Cancel", null)
                         .show();
             });
 
-            // deactivate dan edit tetap sama
             btnDeactivateHabit.setOnClickListener(v -> {
                 boolean isActivating = !habit.getIs_active();
                 showMaterialConfirmationDialog(habit, isActivating);
@@ -516,7 +543,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 HabitLogHelper.instance.deleteByHabitId(String.valueOf(habit.getId()));
             }
 
-            // Update UI
             tvHabitStatus.setBackgroundResource(isActivating ? R.drawable.habit_status_badge : R.drawable.habit_status_badge_inactive);
             tvHabitStatus.setText(isActivating ? "Active" : "Inactive");
             tvHabitCurrent.setText("0");
@@ -524,16 +550,12 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             btnFinishHabit.setEnabled(isActivating);
             btnSkipHabit.setEnabled(isActivating);
 
-            // Update button text
             String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
             boolean isCompletedForPeriod = isHabitCompletedForPeriod(habit, today);
-            // Update card background
             setCardBackground(habit, isCompletedForPeriod);
 
-            // Refresh sorting
             refreshSorting();
 
-            // Show success message
             String message = isActivating ?
                     "Habit \"" + habit.getName() + "\" has been activated!" :
                     "Habit \"" + habit.getName() + "\" has been disabled.";
@@ -565,8 +587,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                     })
                     .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
                     .show();
-
-
         }
 
         private void showStreakCompletionDialog(Habit habit) {
@@ -575,28 +595,25 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                     .setMessage("Congratulations! You've completed your habit streak for \"" + habit.getName() + "\"!\n\n" +
                             "Current streak: " + habit.getCurrent_count() + "/" + habit.getTarget_count() + " completed\n\n" +
                             "What would you like to do next?")
-                    .setIcon(R.drawable.ic_celebration_24) // Tambah icon celebration
-                    .setCancelable(false) // Tidak bisa dibatalkan dengan back button
+                    .setIcon(R.drawable.ic_celebration_24)
+                    .setCancelable(false)
                     .setPositiveButton("Continue Habit", (dialog, which) -> {
-                        // User memilih untuk melanjutkan habit
                         showContinueHabitDialog(habit);
                     })
                     .setNegativeButton("Stop & Rest", (dialog, which) -> {
-                        // User memilih untuk berhenti dan istirahat
                         completeAndDeactivateHabit(habit);
+                        refreshSorting();
                     })
                     .show();
         }
 
         private void showContinueHabitDialog(Habit habit) {
-            // Create custom layout for input
             View dialogView = LayoutInflater.from(itemView.getContext()).inflate(R.layout.dialog_continue_habit, null);
 
             EditText etNewTarget = dialogView.findViewById(R.id.etNewTarget);
             TextView tvCurrentStreak = dialogView.findViewById(R.id.tvCurrentStreak);
             TextView tvHabitName = dialogView.findViewById(R.id.tvHabitName);
 
-            // Set current information
             tvHabitName.setText(habit.getName());
             tvCurrentStreak.setText("Current streak: " + habit.getCurrent_count() + " days completed");
             etNewTarget.setHint("Enter new target (e.g., 30)");
@@ -612,21 +629,21 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                                 int newTarget = Integer.parseInt(newTargetStr);
                                 if (newTarget > 0) {
                                     continueHabitWithNewTarget(habit, newTarget);
+                                    refreshSorting();
                                 } else {
                                     Toast.makeText(itemView.getContext(), "Please enter a valid target greater than 0", Toast.LENGTH_SHORT).show();
-                                    showContinueHabitDialog(habit); // Show dialog again
+                                    showContinueHabitDialog(habit);
                                 }
                             } catch (NumberFormatException e) {
                                 Toast.makeText(itemView.getContext(), "Please enter a valid number", Toast.LENGTH_SHORT).show();
-                                showContinueHabitDialog(habit); // Show dialog again
+                                showContinueHabitDialog(habit);
                             }
                         } else {
                             Toast.makeText(itemView.getContext(), "Please enter a target", Toast.LENGTH_SHORT).show();
-                            showContinueHabitDialog(habit); // Show dialog again
+                            showContinueHabitDialog(habit);
                         }
                     })
                     .setNegativeButton("Back", (dialog, which) -> {
-                        // Kembali ke dialog sebelumnya
                         showStreakCompletionDialog(habit);
                     })
                     .setCancelable(false)
@@ -634,7 +651,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
         }
 
         private void undoHabitLog(Habit habit, String today) {
-
             int deletedRows = HabitLogHelper.instance.deleteByHabitIdAndDate(habit.getId(), today);
 
             if (deletedRows > 0) {
@@ -666,30 +682,26 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             } else {
                 Toast.makeText(itemView.getContext(), "Tidak ada log untuk di-undo!", Toast.LENGTH_SHORT).show();
             }
-            // Pada undoHabitLog, setelah sukses undo:
-            btnFinishHabit.setOnClickListener(v -> bind(habit)); // reset ke listener awal (atau panggil bind(habit))
+            btnFinishHabit.setOnClickListener(v -> bind(habit));
             btnFinishHabit.setEnabled(true);
             btnSkipHabit.setEnabled(true);
         }
 
         private void continueHabitWithNewTarget(Habit habit, int newTarget) {
             try {
-                // Update target tanpa reset current_count
                 ContentValues values = new ContentValues();
                 values.put("target_count", newTarget);
-                values.put("is_active", 1); // Pastikan tetap aktif
+                values.put("is_active", 1);
 
                 habit.setTarget_count(newTarget);
                 habit.setIs_active(true);
 
                 HabitHelper.instance.update(String.valueOf(habit.getId()), values);
 
-                // Update UI
                 tvHabitTarget.setText(String.valueOf(newTarget));
                 int newProgress = (int) ((habit.getCurrent_count() * 100.0f) / newTarget);
                 progressBar.setProgress(newProgress);
 
-                // Update status
                 tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge);
                 tvHabitStatus.setText("Active");
 
@@ -709,27 +721,23 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
 
         private void completeAndDeactivateHabit(Habit habit) {
             try {
-                // Update habit menjadi tidak aktif dan reset current count
                 ContentValues values = new ContentValues();
                 values.put("is_active", 0);
-                values.put("current_count", 0); // Reset streak
+                values.put("current_count", 0);
 
                 habit.setIs_active(false);
                 habit.setCurrent_count(0);
 
                 HabitHelper.instance.update(String.valueOf(habit.getId()), values);
 
-                // Update UI
                 tvHabitCurrent.setText("0");
                 tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge_completed);
                 tvHabitStatus.setText("Completed");
-                progressBar.setProgress(100); // Show full progress as completed
+                progressBar.setProgress(100);
 
-                // Disable buttons
                 btnFinishHabit.setEnabled(false);
                 btnSkipHabit.setEnabled(false);
 
-                // Update card background
                 setCardBackground(habit, true);
 
                 Toast.makeText(itemView.getContext(),
@@ -750,16 +758,14 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             try {
                 ContentValues habitValues = new ContentValues();
                 habitValues.put("current_count", newCurrentCount);
-                habitValues.put("is_active", 1); // Tetap aktif
+                habitValues.put("is_active", 1);
 
                 HabitHelper.instance.update(String.valueOf(habit.getId()), habitValues);
 
-                // Update UI
                 tvHabitCurrent.setText(String.valueOf(newCurrentCount));
                 int newProgress = (int) ((newCurrentCount * 100.0f) / habit.getTarget_count());
                 progressBar.setProgress(newProgress);
 
-                // Show encouraging message
                 int remaining = habit.getTarget_count() - newCurrentCount;
                 Toast.makeText(itemView.getContext(),
                         "Great job! Only " + remaining + " more days to complete your streak! 🔥",
@@ -773,5 +779,4 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             }
         }
     }
-
 }

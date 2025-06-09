@@ -57,6 +57,7 @@ public class HomeFragment extends Fragment {
     private TextView tvQuote, tvAuthor;
     private ImageView btnRefreshQuote;
     private ProgressBar progressBarQuote;
+    private TextView tvAllCompletedMessage; // Tambahkan deklarasi
 
     // Adapters and Helpers
     private HabitAdapter adapter;
@@ -138,12 +139,21 @@ public class HomeFragment extends Fragment {
         btnRefreshQuote = view.findViewById(R.id.btnRefreshQuote);
         progressBarQuote = view.findViewById(R.id.progressBar);
         emptyStateLayout = view.findViewById(R.id.emptyStateLayout);
+        tvAllCompletedMessage = view.findViewById(R.id.tv_all_completed_message); // Inisialisasi
     }
 
     private void setupRecyclerView() {
         rvHabit.setLayoutManager(new LinearLayoutManager(requireContext()));
         adapter = new HabitAdapter(requireActivity());
         rvHabit.setAdapter(adapter);
+
+        // Set listener untuk pesan selesai semua habit aktif
+        adapter.setOnAllHabitsCompletedListener(() -> {
+            if (tvAllCompletedMessage != null) {
+                tvAllCompletedMessage.setVisibility(View.VISIBLE);
+                tvAllCompletedMessage.setText("Selamat telah menyelesaikan habit untuk hari ini!");
+            }
+        });
     }
 
     private void setupClickListeners() {
@@ -166,11 +176,14 @@ public class HomeFragment extends Fragment {
                     adapter.setListHabits(habits);
                     rvHabit.setVisibility(View.VISIBLE);
                     emptyStateLayout.setVisibility(View.GONE);
-
                 } else {
                     adapter.setListHabits(new ArrayList<>());
                     rvHabit.setVisibility(View.GONE);
                     emptyStateLayout.setVisibility(View.VISIBLE);
+                }
+                // Sembunyikan pesan jika ada habit aktif yang belum selesai
+                if (tvAllCompletedMessage != null) {
+                    tvAllCompletedMessage.setVisibility(View.GONE);
                 }
             }
         }).execute();
