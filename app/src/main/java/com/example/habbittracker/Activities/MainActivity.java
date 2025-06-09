@@ -16,6 +16,7 @@ import com.example.habbittracker.Fragment.GeneralFragment;
 import com.example.habbittracker.Fragment.GraphFragment;
 import com.example.habbittracker.Fragment.HomeFragment;
 import com.example.habbittracker.R;
+import com.example.habbittracker.ThemeManager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
@@ -23,6 +24,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         com.example.habbittracker.ThemeManager.applyTheme(this);
+        ThemeManager.applyTheme(this);
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);

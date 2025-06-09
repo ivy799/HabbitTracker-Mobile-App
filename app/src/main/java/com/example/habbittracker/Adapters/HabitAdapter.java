@@ -203,7 +203,7 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
         final TextView tvHabitTarget;
         final TextView tvHabitCurrent;
         final TextView tvHabitStatus;
-        final MaterialButton btnFinishHabit, btnSkipHabit, btnDeactivateHabit, btnDeleteHabit, btnEditHabit;
+        final MaterialButton btnFinishHabit, btnSkipHabit, btnDeactivateHabit, btnEditHabit;
         final ProgressBar progressBar;
         final ImageButton btnToggleDetails;
         final ConstraintLayout detailsSection;
@@ -227,7 +227,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             this.progressBar = itemView.findViewById(R.id.progressBar);
             this.btnToggleDetails = itemView.findViewById(R.id.btnToggleDetails);
             this.detailsSection = itemView.findViewById(R.id.detailsSection);
-            this.btnDeleteHabit = itemView.findViewById(R.id.btnDeleteHabit);
             this.btnEditHabit = itemView.findViewById(R.id.btnEditHabit);
 
 
@@ -300,20 +299,22 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
 
             String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
             boolean sudahSelesaiHariIni = false;
-            boolean weeklyCooldownPassed = true;
-            boolean monthlyCooldownPassed = true;
-
-            boolean isCompletedForPeriod = isHabitCompletedForPeriod(habit, today);
+            boolean isCompletedToday = false;
+            int logStatusToday = -1;
 
             Cursor habitLog = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today);
             if (habitLog != null && habitLog.moveToFirst()) {
                 int statusColumnIndex = habitLog.getColumnIndex("status");
                 if (statusColumnIndex != -1) {
-                    int status = habitLog.getInt(statusColumnIndex);
-                    sudahSelesaiHariIni = (status == 1 || status == 2);
+                    logStatusToday = habitLog.getInt(statusColumnIndex);
+                    sudahSelesaiHariIni = (logStatusToday == 1 || logStatusToday == 2);
+                    isCompletedToday = (logStatusToday == 1);
                 }
                 habitLog.close();
             }
+
+            boolean weeklyCooldownPassed = true;
+            boolean monthlyCooldownPassed = true;
 
             if (habit.getFrequency().equalsIgnoreCase("weekly")) {
                 Cursor lastWeeklyLog = HabitLogHelper.instance.queryLastCompletedLogByHabitId(habit.getId());
@@ -397,10 +398,11 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 e.printStackTrace();
             }
 
-            setCardBackground(habit, isCompletedForPeriod);
+            // Tag/status & warna card
+            setCardBackground(habit, sudahSelesaiHariIni);
 
             if (habit.getIs_active()) {
-                if (isCompletedForPeriod) {
+                if (sudahSelesaiHariIni) {
                     tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge_completed);
                     tvHabitStatus.setText("Completed");
                 } else {
@@ -412,6 +414,7 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 tvHabitStatus.setText("Inactive");
             }
 
+            // Tombol Complete dan Skip: enable jika belum "completed/skipped" hari ini, kecuali jika sudah completed, tombol Complete jadi "Undo Complete" dan tetap bisa diklik
             boolean canCompleteToday;
             if (habit.getFrequency().equalsIgnoreCase("weekly")) {
                 canCompleteToday = habit.getIs_active() && !sudahSelesaiHariIni && weeklyCooldownPassed;
@@ -421,71 +424,78 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 canCompleteToday = habit.getIs_active() && !sudahSelesaiHariIni;
             }
 
-            btnFinishHabit.setEnabled(canCompleteToday);
-            btnSkipHabit.setEnabled(canCompleteToday);
-            btnFinishHabit.setOnClickListener(v -> {
-                try (Cursor c = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today)) {
-                    boolean alreadyLogged = (c != null && c.moveToFirst());
-                    if (!alreadyLogged) {
-                        ContentValues values = new ContentValues();
-                        values.put("habit_id", habit.getId());
-                        values.put("log_date", today);
-                        values.put("status", 1);
-                        HabitLogHelper.instance.insert(values);
+            // ---- TOMBOL COMPLETE ----
+            if (isCompletedToday) {
+                btnFinishHabit.setEnabled(true);
+                btnFinishHabit.setOnClickListener(v -> {
+                    undoHabitLog(habit, today);
+                    bind(habit);
+                });
+                btnSkipHabit.setEnabled(false);
+            } else if (canCompleteToday) {
+                btnFinishHabit.setEnabled(true);
+                btnFinishHabit.setOnClickListener(v -> {
+                    // Insert completion log
+                    ContentValues values = new ContentValues();
+                    values.put("habit_id", habit.getId());
+                    values.put("log_date", today);
+                    values.put("status", 1);
+                    HabitLogHelper.instance.insert(values);
 
-                        // Update model
-                        int newCurrentCount = habit.getCurrent_count() + 1;
-                        habit.setCurrent_count(newCurrentCount);
+                    int newCurrentCount = habit.getCurrent_count() + 1;
+                    habit.setCurrent_count(newCurrentCount);
 
-                        // CEK APAKAH STREAK TERCAPAI
-                        if (newCurrentCount >= habit.getTarget_count()) {
-                            // STREAK TERCAPAI - TAMPILKAN DIALOG
-                            showStreakCompletionDialog(habit);
-                        } else {
-                            // Update normal tanpa dialog
-                            updateHabitProgress(habit, newCurrentCount);
-                        }
-
-                        btnFinishHabit.setEnabled(false);
-                        btnSkipHabit.setEnabled(false);
-                        refreshSorting();
+                    if (newCurrentCount >= habit.getTarget_count()) {
+                        showStreakCompletionDialog(habit);
+                    } else {
+                        updateHabitProgress(habit, newCurrentCount);
                     }
-                }
+                    // Setelah complete, bind ulang supaya tombol berubah menjadi "Undo Complete"
+                    bind(habit);
+                });
+                btnSkipHabit.setEnabled(true);
+            } else {
+                // Sudah skip hari ini atau tidak bisa di-complete
+                btnFinishHabit.setEnabled(false);
+                btnFinishHabit.setOnClickListener(null);
+                btnSkipHabit.setEnabled(false);
+            }
+
+            // ---- TOMBOL SKIP ----
+            btnSkipHabit.setOnClickListener(v -> {
+                // Tampilkan dialog konfirmasi sebelum skip
+                new androidx.appcompat.app.AlertDialog.Builder(itemView.getContext())
+                        .setTitle("Skip Habit")
+                        .setMessage("Are you sure you want to skip this habit for today? Your streak will be preserved and cannot be undone.")
+                        .setPositiveButton("Skip", (dialog, which) -> {
+                            ContentValues values = new ContentValues();
+                            values.put("habit_id", habit.getId());
+                            values.put("log_date", today);
+                            values.put("status", 2);
+                            HabitLogHelper.instance.insert(values);
+
+                            btnFinishHabit.setEnabled(false);
+                            btnSkipHabit.setEnabled(false);
+
+                            Toast.makeText(itemView.getContext(),
+                                    "Habit skipped for today. Your streak is preserved!",
+                                    Toast.LENGTH_SHORT).show();
+
+                            // Refresh sorting untuk memindahkan habit yang skipped ke bawah
+                            refreshSorting();
+                            // bind ulang agar update state UI
+                            bind(habit);
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show();
             });
+
+            // deactivate dan edit tetap sama
             btnDeactivateHabit.setOnClickListener(v -> {
-                ContentValues values = new ContentValues();
                 boolean isActivating = !habit.getIs_active();
                 showMaterialConfirmationDialog(habit, isActivating);
             });
-            btnSkipHabit.setOnClickListener(v -> {
-                try (Cursor c = HabitLogHelper.instance.queryByHabitIdAndDate(habit.getId(), today)) {
-                    boolean alreadyLogged = (c != null && c.moveToFirst());
-                    if (!alreadyLogged) {
-                        ContentValues values = new ContentValues();
-                        values.put("habit_id", habit.getId());
-                        values.put("log_date", today);
-                        values.put("status", 2);
-                        HabitLogHelper.instance.insert(values);
-
-                        btnFinishHabit.setEnabled(false);
-                        btnSkipHabit.setEnabled(false);
-
-                        Toast.makeText(itemView.getContext(),
-                                "Habit skipped for today. Your streak is preserved!",
-                                Toast.LENGTH_SHORT).show();
-
-                        // Refresh sorting untuk memindahkan habit yang skipped ke bawah
-                        refreshSorting();
-                    } else {
-                        btnSkipHabit.setEnabled(false);
-                        Toast.makeText(itemView.getContext(),
-                                "You've already logged this habit today",
-                                Toast.LENGTH_SHORT).show();
-                    }
-                }
-            });
         }
-
         private void setCardBackground(Habit habit, boolean isCompletedForPeriod) {
             if (!habit.getIs_active()) {
                 itemView.setAlpha(0.6f);
@@ -564,6 +574,7 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
 
 
         }
+
         private void showStreakCompletionDialog(Habit habit) {
             new com.google.android.material.dialog.MaterialAlertDialogBuilder(itemView.getContext())
                     .setTitle("🎉 Streak Completed!")
@@ -628,9 +639,45 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                     .show();
         }
 
-        /**
-         * Method untuk melanjutkan habit dengan target baru
-         */
+        private void undoHabitLog(Habit habit, String today) {
+
+            int deletedRows = HabitLogHelper.instance.deleteByHabitIdAndDate(habit.getId(), today);
+
+            if (deletedRows > 0) {
+                int newCurrentCount = habit.getCurrent_count() > 0 ? habit.getCurrent_count() - 1 : 0;
+                habit.setCurrent_count(newCurrentCount);
+
+                ContentValues values = new ContentValues();
+                values.put("current_count", newCurrentCount);
+
+                if (!habit.getIs_active() && newCurrentCount < habit.getTarget_count()) {
+                    values.put("is_active", 1);
+                    habit.setIs_active(true);
+                }
+
+                HabitHelper.instance.update(String.valueOf(habit.getId()), values);
+
+                tvHabitCurrent.setText(String.valueOf(newCurrentCount));
+                int newProgress = (int) ((newCurrentCount * 100.0f) / habit.getTarget_count());
+                progressBar.setProgress(newProgress);
+
+                btnFinishHabit.setEnabled(habit.getIs_active());
+                btnSkipHabit.setEnabled(habit.getIs_active());
+
+                setCardBackground(habit, false);
+
+                Toast.makeText(itemView.getContext(), "Habit log berhasil di-undo!", Toast.LENGTH_SHORT).show();
+
+                refreshSorting();
+            } else {
+                Toast.makeText(itemView.getContext(), "Tidak ada log untuk di-undo!", Toast.LENGTH_SHORT).show();
+            }
+            // Pada undoHabitLog, setelah sukses undo:
+            btnFinishHabit.setOnClickListener(v -> bind(habit)); // reset ke listener awal (atau panggil bind(habit))
+            btnFinishHabit.setEnabled(true);
+            btnSkipHabit.setEnabled(true);
+        }
+
         private void continueHabitWithNewTarget(Habit habit, int newTarget) {
             try {
                 // Update target tanpa reset current_count
@@ -666,9 +713,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             }
         }
 
-        /**
-         * Method untuk menyelesaikan habit dan menonaktifkannya
-         */
         private void completeAndDeactivateHabit(Habit habit) {
             try {
                 // Update habit menjadi tidak aktif dan reset current count
@@ -708,9 +752,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
             }
         }
 
-        /**
-         * Method untuk update progress habit normal (belum mencapai target)
-         */
         private void updateHabitProgress(Habit habit, int newCurrentCount) {
             try {
                 ContentValues habitValues = new ContentValues();
