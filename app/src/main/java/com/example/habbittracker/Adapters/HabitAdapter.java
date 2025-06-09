@@ -62,12 +62,6 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
         notifyDataSetChanged();
     }
 
-    /**
-     * Sort habits dengan prioritas:
-     * 1. Inactive habits selalu paling bawah
-     * 2. Active & belum completed di atas
-     * 3. Active & sudah completed di tengah
-     */
     private void sortHabitsByCompletionStatus() {
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
@@ -466,7 +460,7 @@ public class HabitAdapter extends RecyclerView.Adapter<HabitAdapter.HabitViewHol
                 // Tampilkan dialog konfirmasi sebelum skip
                 new androidx.appcompat.app.AlertDialog.Builder(itemView.getContext())
                         .setTitle("Skip Habit")
-                        .setMessage("Are you sure you want to skip this habit for today? Your streak will be preserved and cannot be undone.")
+                        .setMessage("Are you sure you want to skip this habit for today? Your streak will be preserved.")
                         .setPositiveButton("Skip", (dialog, which) -> {
                             ContentValues values = new ContentValues();
                             values.put("habit_id", habit.getId());
