@@ -146,13 +146,6 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         return displayList.size();
     }
 
-    private void sortHabitsByCompletionStatus() {
-        // Sorting logic is now handled in setListHabits
-    }
-
-    /**
-     * Cek apakah habit sudah completed/skipped untuk periode yang sesuai
-     */
     private boolean isHabitCompletedForPeriod(Habit habit, String today) {
         boolean completedToday = false;
         boolean weeklyCooldownActive = false;
@@ -219,9 +212,6 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         return completedToday;
     }
 
-    /**
-     * Method untuk refresh sorting setelah ada perubahan status habit
-     */
     public void refreshSorting() {
         setListHabits(originalHabits);
     }
