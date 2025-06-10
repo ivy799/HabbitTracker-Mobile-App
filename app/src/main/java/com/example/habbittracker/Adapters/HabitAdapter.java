@@ -346,6 +346,29 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 habitLog.close();
             }
 
+            // --- Tambahan: Ubah warna tombol skip sesuai status selesai/skip ---
+            if (sudahSelesaiHariIni) {
+                if (isCompletedToday) {
+                    // Habit selesai (completed)
+                    btnFinishHabit.setIconResource(R.drawable.ic_check_circle_done_24);
+                    btnSkipHabit.setIconResource(R.drawable.ic_skip_next_24);
+                    // Skip button warna default
+                    btnSkipHabit.setBackgroundTintList(itemView.getContext().getResources().getColorStateList(R.color.primary_light));
+                } else {
+                    // Habit di-skip
+                    btnFinishHabit.setIconResource(R.drawable.ic_check_24);
+                    btnSkipHabit.setIconResource(R.drawable.ic_skip_next_24);
+                    // Ganti warna tombol skip saat skip
+                    btnSkipHabit.setBackgroundTintList(itemView.getContext().getResources().getColorStateList(R.color.warning_color));
+                }
+            } else {
+                // Belum selesai, icon dan warna default
+                btnFinishHabit.setIconResource(R.drawable.ic_check_24);
+                btnSkipHabit.setIconResource(R.drawable.ic_skip_next_24);
+                btnSkipHabit.setBackgroundTintList(itemView.getContext().getResources().getColorStateList(R.color.primary_light));
+            }
+            // --- End tambahan ---
+
             boolean weeklyCooldownPassed = true;
             boolean monthlyCooldownPassed = true;
 
@@ -502,6 +525,9 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                             btnFinishHabit.setEnabled(false);
                             btnSkipHabit.setEnabled(false);
 
+                            // Hanya ubah warna tombol skip, icon tetap
+                            btnSkipHabit.setBackgroundTintList(itemView.getContext().getResources().getColorStateList(R.color.warning_color));
+
                             Toast.makeText(itemView.getContext(),
                                     "Habit skipped for today. Your streak is preserved!",
                                     Toast.LENGTH_SHORT).show();
@@ -517,6 +543,7 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 showMaterialConfirmationDialog(habit, isActivating);
             });
         }
+
         private void setCardBackground(Habit habit, boolean isCompletedForPeriod) {
             if (!habit.getIs_active()) {
                 itemView.setAlpha(0.6f);
@@ -675,6 +702,10 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 btnSkipHabit.setEnabled(habit.getIs_active());
 
                 setCardBackground(habit, false);
+
+                // --- Tambahan: kembalikan warna tombol skip ke semula saat undo ---
+                btnSkipHabit.setBackgroundTintList(itemView.getContext().getResources().getColorStateList(R.color.primary_light));
+                // --- End tambahan ---
 
                 Toast.makeText(itemView.getContext(), "Habit log berhasil di-undo!", Toast.LENGTH_SHORT).show();
 
