@@ -2,8 +2,8 @@
     <color name="black">#FFFFFF</color>
     <color name="white">#181A20</color>
     <color name="primary_color">#D0BCFF</color>
-    <color name="primary_dark">#381E72</color>
-    <color name="primary_light">#4F378B</color>
+    <color name="primary_dark">#B9A4D7</color>
+    <color name="primary_light">#C3AEF4</color>
     <color name="background_light">#181A20</color>
     <color name="white_80">#CC181A20</color>
     <color name="text_secondary">#CAC4D0</color>
