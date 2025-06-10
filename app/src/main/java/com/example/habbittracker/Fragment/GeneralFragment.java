@@ -24,19 +24,19 @@ public class GeneralFragment extends Fragment {
     private RadioButton radioSystem, radioLight, radioDark;
     private TextView textCurrentTheme;
     private Button btnApplyTheme;
-
     private SharedPreferences sharedPreferences;
     private static final String PREFS_NAME = "theme_prefs";
     private static final String THEME_KEY = "selected_theme";
-
-    // Theme constants
     private static final int THEME_SYSTEM = 0;
     private static final int THEME_LIGHT = 1;
     private static final int THEME_DARK = 2;
 
+
+
     public GeneralFragment() {
-        // Required empty public constructor
     }
+
+
 
     public static GeneralFragment newInstance() {
         return new GeneralFragment();
@@ -46,7 +46,6 @@ public class GeneralFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Initialize SharedPreferences
         sharedPreferences = requireActivity().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
 
@@ -118,10 +117,7 @@ public class GeneralFragment extends Fragment {
             selectedTheme = THEME_DARK;
         }
 
-        // Save theme preference menggunakan ThemeManager
         ThemeManager.saveTheme(requireContext(), selectedTheme);
-
-        // Apply theme
         ThemeManager.applyTheme(requireContext());
 
         Toast.makeText(getContext(), "Theme applied! Restarting app...", Toast.LENGTH_SHORT).show();

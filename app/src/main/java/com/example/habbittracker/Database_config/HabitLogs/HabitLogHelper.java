@@ -121,7 +121,6 @@ public class HabitLogHelper {
         );
     }
 
-    // Tambahkan method ini ke HabitLogHelper.java
     public Cursor queryRecentLogs(String fromDate) {
         return sqLiteDatabase.query(
                 TABLE_NAME,
@@ -159,7 +158,6 @@ public class HabitLogHelper {
     }
 
     public Cursor queryLastCompletedLogByHabitId(int habitId) {
-        // Mengambil log terakhir yang memiliki status 1 (selesai) untuk habit tertentu
         return sqLiteDatabase.query(
                 TABLE_NAME,
                 null,

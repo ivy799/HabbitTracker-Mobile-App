@@ -39,7 +39,6 @@ public class HabitFormActivity extends AppCompatActivity {
             etHabitStartDate,
             etHabitTarget;
 
-    // Changed from Spinner to AutoCompleteTextView
     private AutoCompleteTextView spHabitFrequency, spHabitStatus, spHabitCategory;
 
     private Habit habit;
@@ -60,7 +59,6 @@ public class HabitFormActivity extends AppCompatActivity {
             return insets;
         });
 
-        // Initialize views
         initializeViews();
 
         habitHelper = HabitHelper.getInstance(getApplicationContext());
@@ -71,7 +69,6 @@ public class HabitFormActivity extends AppCompatActivity {
 
         habit = getIntent().getParcelableExtra(EXTRA_HABIT);
 
-        // Jika tidak ada EXTRA_HABIT, cek habit_id
         if (habit == null) {
             int habitId = getIntent().getIntExtra("habit_id", -1);
             if (habitId != -1) {
@@ -102,35 +99,28 @@ public class HabitFormActivity extends AppCompatActivity {
     }
 
     private void setupSpinners() {
-        // Setup frequency spinner
         String[] frequencyOptions = getResources().getStringArray(R.array.frequency_options);
         ArrayAdapter<String> freqAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_dropdown_item_1line, frequencyOptions);
         spHabitFrequency.setAdapter(freqAdapter);
 
-        // Setup status spinner
         String[] statusOptions = getResources().getStringArray(R.array.status_options);
         ArrayAdapter<String> statusAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_dropdown_item_1line, statusOptions);
         spHabitStatus.setAdapter(statusAdapter);
 
-        // Setup category spinner
         String[] categoryOptions = getResources().getStringArray(R.array.category_options);
         ArrayAdapter<String> categoryAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_dropdown_item_1line, categoryOptions);
         spHabitCategory.setAdapter(categoryAdapter);
     }
 
-    /**
-     * Load habit data dari database berdasarkan ID
-     */
     private Habit loadHabitById(int habitId) {
         try {
             Cursor cursor = habitHelper.search(habitId);
             if (cursor != null && cursor.moveToFirst()) {
                 Habit loadedHabit = new Habit();
 
-                // Extract data dari cursor
                 int idIndex = cursor.getColumnIndex("id");
                 int nameIndex = cursor.getColumnIndex("name");
                 int descriptionIndex = cursor.getColumnIndex("description");
@@ -150,7 +140,6 @@ public class HabitFormActivity extends AppCompatActivity {
                 if (frequencyIndex >= 0) loadedHabit.setFrequency(cursor.getString(frequencyIndex));
                 if (isActiveIndex >= 0) loadedHabit.setIs_active(cursor.getInt(isActiveIndex) == 1);
 
-                // Parse start date
                 if (startDateIndex >= 0) {
                     String dateStr = cursor.getString(startDateIndex);
                     try {
@@ -195,9 +184,6 @@ public class HabitFormActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Populate form dengan data habit untuk edit
-     */
     private void populateEditForm() {
         if (habit != null) {
             etHabitName.setText(habit.getName());
@@ -207,7 +193,6 @@ public class HabitFormActivity extends AppCompatActivity {
             spHabitFrequency.setText(habit.getFrequency(), false);
             spHabitStatus.setText(habit.getIs_active() ? "Active" : "Inactive", false);
 
-            // Format tanggal untuk ditampilkan
             if (habit.getStart_date() != null) {
                 SimpleDateFormat displayFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
                 etHabitStartDate.setText(displayFormat.format(habit.getStart_date()));
@@ -230,9 +215,6 @@ public class HabitFormActivity extends AppCompatActivity {
         btnDelete.setOnClickListener(v -> showDeleteConfirmation());
     }
 
-    /**
-     * Validasi input sebelum save
-     */
     private boolean validateInput() {
         String name = etHabitName.getText().toString().trim();
         String description = etHabitDescription.getText().toString().trim();
@@ -309,7 +291,6 @@ public class HabitFormActivity extends AppCompatActivity {
         String frequency = spHabitFrequency.getText().toString().trim();
         boolean isActive = spHabitStatus.getText().toString().equals("Active");
 
-        // Update habit object
         habit.setName(name);
         habit.setDescription(description);
         habit.setCategory(category);
@@ -321,7 +302,6 @@ public class HabitFormActivity extends AppCompatActivity {
         Date date = sdf.parse(startDate);
         habit.setStart_date(date);
 
-        // Prepare ContentValues
         ContentValues values = new ContentValues();
         values.put("name", name);
         values.put("description", description);
@@ -335,7 +315,6 @@ public class HabitFormActivity extends AppCompatActivity {
         intent.putExtra(EXTRA_HABIT, habit);
 
         if (isEdit) {
-            // Update existing habit - jangan ubah current_count saat edit
             long result = habitHelper.update(String.valueOf(habit.getId()), values);
             if (result > 0) {
                 setResult(RESULT_UPDATE, intent);
@@ -345,13 +324,12 @@ public class HabitFormActivity extends AppCompatActivity {
                 Toast.makeText(this, "Failed to update habit", Toast.LENGTH_SHORT).show();
             }
         } else {
-            // Add new habit - TAMBAH current_count untuk habit baru
-            values.put("current_count", 0); // PENTING: Tambah ini!
+            values.put("current_count", 0);
 
             long result = habitHelper.insert(values);
             if (result > 0) {
                 habit.setId((int) result);
-                habit.setCurrent_count(0); // Set di object juga
+                habit.setCurrent_count(0);
                 setResult(RESULT_ADD, intent);
                 Toast.makeText(this, "Habit added successfully!", Toast.LENGTH_SHORT).show();
                 finish();
@@ -361,7 +339,6 @@ public class HabitFormActivity extends AppCompatActivity {
         }
     }
     private void showDeleteConfirmation() {
-        // Cek berapa banyak logs yang akan dihapus
         int logCount = getHabitLogCount(habit.getId());
 
         String message = "Are you sure you want to delete \"" + habit.getName() + "\"?\n\n" +
@@ -383,9 +360,6 @@ public class HabitFormActivity extends AppCompatActivity {
                 .show();
     }
 
-    /**
-     * Hitung jumlah logs untuk habit ini
-     */
     private int getHabitLogCount(int habitId) {
         try {
             Cursor cursor = HabitLogHelper.instance.queryByHabitId(String.valueOf(habitId));
@@ -400,9 +374,6 @@ public class HabitFormActivity extends AppCompatActivity {
         return 0;
     }
 
-    /**
-     * Menghapus habit beserta semua logs terkait
-     */
     private void deleteHabitWithLogs() {
         if (habit == null || habit.getId() <= 0) {
             Toast.makeText(this, "Invalid habit data", Toast.LENGTH_SHORT).show();

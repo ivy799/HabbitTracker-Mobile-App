@@ -8,7 +8,6 @@ public class HabitTrackerApplication extends Application {
     public void onCreate() {
         super.onCreate();
 
-        // Apply saved theme saat aplikasi pertama kali dibuka
         ThemeManager.applyTheme(this);
     }
 }

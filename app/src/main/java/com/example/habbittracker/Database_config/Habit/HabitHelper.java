@@ -16,7 +16,6 @@ public class HabitHelper {
     private boolean isOpen = false;
 
     private HabitHelper(Context context) {
-        // Gunakan applicationContext untuk menghindari memory leak
         databaseHelper = new DatabaseHelper(context.getApplicationContext());
     }
 
@@ -45,12 +44,10 @@ public class HabitHelper {
         }
     }
 
-    // Cek apakah database terbuka
     public boolean isOpen() {
         return isOpen && sqLiteDatabase != null && sqLiteDatabase.isOpen();
     }
 
-    // Metode untuk memastikan database terbuka sebelum operasi database
     private void ensureOpen() {
         if (!isOpen()) {
             open();
@@ -71,11 +68,11 @@ public class HabitHelper {
     }
 
     public Cursor search(int id) {
-        ensureOpen(); // Pastikan database sudah terbuka
+        ensureOpen();
         return sqLiteDatabase.query(
                 TABLE_NAME,
                 null,
-                HabitDatabaseContract.habitColumns._ID + " = ?", // Cari berdasarkan ID habit
+                HabitDatabaseContract.habitColumns._ID + " = ?",
                 new String[]{String.valueOf(id)},
                 null,
                 null,

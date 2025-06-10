@@ -9,7 +9,6 @@ import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -67,17 +66,11 @@ public class GraphFragment extends Fragment {
     private MaterialButton btnRefresh;
     private RecyclerView rvRecentActivity;
     private RecentActivityAdapter activityAdapter;
-
     private boolean isLineChartVisible = true;
     private ArrayList<Habit> habitList = new ArrayList<>();
     private ArrayList<HabitLog> recentLogs = new ArrayList<>();
 
     public GraphFragment() {
-        // Required empty public constructor
-    }
-
-    public static GraphFragment newInstance() {
-        return new GraphFragment();
     }
 
     @Override
@@ -90,6 +83,13 @@ public class GraphFragment extends Fragment {
 
         return view;
     }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        refreshData();
+    }
+
 
     private void initViews(View view) {
         tvTotalHabits = view.findViewById(R.id.tvTotalHabits);
@@ -116,7 +116,6 @@ public class GraphFragment extends Fragment {
             rvRecentActivity.setAdapter(activityAdapter);
         }
     }
-
     private void setupClickListeners() {
         if (btnToggleChart != null) {
             btnToggleChart.setOnClickListener(v -> toggleChart());
@@ -125,7 +124,6 @@ public class GraphFragment extends Fragment {
             btnRefresh.setOnClickListener(v -> refreshData());
         }
     }
-
     private void loadData() {
         Log.d(TAG, "Loading data...");
         loadHabits();
@@ -133,7 +131,6 @@ public class GraphFragment extends Fragment {
         updateStatistics();
         setupCharts();
     }
-
     private void loadHabits() {
         habitList.clear();
         try {
@@ -154,7 +151,6 @@ public class GraphFragment extends Fragment {
             e.printStackTrace();
         }
     }
-
     private void loadRecentActivity() {
         recentLogs.clear();
         try {
@@ -173,7 +169,6 @@ public class GraphFragment extends Fragment {
                     cursor.close();
                     Log.d(TAG, "Loaded " + recentLogs.size() + " recent logs");
 
-                    // Debug: Print all logs
                     for (HabitLog log : recentLogs) {
                         Log.d(TAG, "Log: Date=" + log.getLog_date() + ", Status=" + log.getStatus() + ", HabitId=" + log.getHabit_id());
                     }
@@ -192,7 +187,6 @@ public class GraphFragment extends Fragment {
             activityAdapter.updateLogs(recentLogs);
         }
     }
-
     private void updateStatistics() {
         int totalHabits = habitList.size();
         int activeHabits = 0;
@@ -216,14 +210,12 @@ public class GraphFragment extends Fragment {
         if (tvActiveHabits != null) tvActiveHabits.setText(String.valueOf(activeHabits));
         if (tvCompletionRate != null) tvCompletionRate.setText(String.format(Locale.getDefault(), "%.1f%%", completionRate));
     }
-
     private void setupCharts() {
         Log.d(TAG, "Setting up charts...");
         setupLineChart();
         setupBarChart();
         setupPieChart();
     }
-
     private void setupLineChart() {
         if (lineChart == null) {
             Log.e(TAG, "LineChart is null");
@@ -305,7 +297,6 @@ public class GraphFragment extends Fragment {
 
         Log.d(TAG, "LineChart setup completed");
     }
-
     private void setupBarChart() {
         if (barChart == null) {
             Log.e(TAG, "BarChart is null");
@@ -348,7 +339,6 @@ public class GraphFragment extends Fragment {
         barChart.animateY(1000);
         barChart.invalidate();
     }
-
     private void setupPieChart() {
         if (pieChart == null) {
             Log.e(TAG, "PieChart is null");
@@ -392,7 +382,6 @@ public class GraphFragment extends Fragment {
         pieChart.setHoleRadius(40f);
         pieChart.setTransparentCircleRadius(45f);
 
-        // Hanya ubah warna legend sesuai tema
         Legend legend = pieChart.getLegend();
         int onSurfaceColor = getThemeColor(com.google.android.material.R.attr.colorOnSurface);
         legend.setTextColor(onSurfaceColor);
@@ -400,7 +389,6 @@ public class GraphFragment extends Fragment {
         pieChart.animateY(1000);
         pieChart.invalidate();
     }
-
     private void toggleChart() {
         if (lineChart == null || barChart == null || btnToggleChart == null) {
             Log.e(TAG, "Chart views or button is null");
@@ -421,7 +409,6 @@ public class GraphFragment extends Fragment {
             Log.d(TAG, "Switched to Line Chart");
         }
     }
-
     private void refreshData() {
         Log.d(TAG, "Refreshing data...");
 
@@ -433,7 +420,6 @@ public class GraphFragment extends Fragment {
         loadData();
         Toast.makeText(getContext(), "Data refreshed", Toast.LENGTH_SHORT).show();
     }
-
     private int countCompletedHabitsForDate(String date) {
         int count = 0;
         Log.d(TAG, "Counting completed habits for date: " + date);
@@ -457,7 +443,6 @@ public class GraphFragment extends Fragment {
         Log.d(TAG, "Total completed habits for " + date + ": " + count);
         return count;
     }
-
     private String[] getLastSevenDays() {
         String[] days = new String[7];
         SimpleDateFormat sdf = new SimpleDateFormat("MMM dd", Locale.getDefault());
@@ -471,14 +456,6 @@ public class GraphFragment extends Fragment {
         Log.d(TAG, "Last seven days: " + String.join(", ", days));
         return days;
     }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        Log.d(TAG, "Fragment resumed");
-        refreshData();
-    }
-
     private int getThemeColor(int colorAttr) {
         TypedValue typedValue = new TypedValue();
         if (getContext() != null && getContext().getTheme().resolveAttribute(colorAttr, typedValue, true)) {
@@ -487,10 +464,6 @@ public class GraphFragment extends Fragment {
         // Fallback colors
         return isDarkMode() ? Color.WHITE : Color.BLACK;
     }
-
-    /**
-     * Check if current theme is dark mode
-     */
     private boolean isDarkMode() {
         if (getContext() == null) return false;
 

@@ -30,16 +30,14 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            // Hanya handle top dan sides
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0);
-            return WindowInsetsCompat.CONSUMED; // Consume insets
+            return WindowInsetsCompat.CONSUMED;
         });
 
         if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle("Habit Tracker");
         }
 
-        // Setup bottom navigation (jika diperlukan)
         setupBottomNavigation();
         loadFragment(new HomeFragment());
     }
@@ -81,14 +79,12 @@ public class MainActivity extends AppCompatActivity {
 
         if (requestCode == HabitFormActivity.REQUEST_UPDATE) {
             if (resultCode == HabitFormActivity.RESULT_UPDATE) {
-                // Refresh data setelah update
                 Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
                 if (currentFragment instanceof HomeFragment) {
                     ((HomeFragment) currentFragment).refreshHabits();
                 }
                 Toast.makeText(this, "Habit updated successfully!", Toast.LENGTH_SHORT).show();
             } else if (resultCode == HabitFormActivity.RESULT_DELETE) {
-                // Handle delete result
                 Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
                 if (currentFragment instanceof HomeFragment) {
                     ((HomeFragment) currentFragment).refreshHabits();

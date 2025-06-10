@@ -33,7 +33,6 @@ import com.example.habbittracker.Database_config.HabitLogs.HabitLogHelper;
 import com.example.habbittracker.Models.Habit;
 import com.example.habbittracker.Models.Quotes;
 import com.example.habbittracker.R;
-import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.lang.ref.WeakReference;
@@ -50,19 +49,14 @@ public class HomeFragment extends Fragment {
 
     private static final int REQUEST_ADD = 100;
     private static final int REQUEST_UPDATE = 200;
-
-    // Views
     private RecyclerView rvHabit;
     private FloatingActionButton fabAdd;
     private TextView tvQuote, tvAuthor;
     private ImageView btnRefreshQuote;
     private ProgressBar progressBarQuote;
-    // Adapters and Helpers
     private HabitAdapter adapter;
     private HabitHelper habitHelper;
     private LinearLayout emptyStateLayout;
-
-    // Quote caching
     private SharedPreferences sharedPreferences;
     private static final String PREF_NAME = "QuotePrefs";
     private static final String KEY_LAST_QUOTE_TEXT = "last_quote_text";
@@ -72,22 +66,15 @@ public class HomeFragment extends Fragment {
     public HomeFragment() {
     }
 
-    public static HomeFragment newInstance() {
-        return new HomeFragment();
-    }
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Initialize SharedPreferences
         sharedPreferences = requireActivity().getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
 
-        // Initialize database
         DatabaseHelper dbHelper = new DatabaseHelper(requireContext());
         HabitLogHelper.getInstance(dbHelper).open();
 
-        // Initialize helper
         habitHelper = HabitHelper.getInstance(requireContext());
         loadData();
     }
@@ -98,7 +85,6 @@ public class HomeFragment extends Fragment {
         habitHelper.open();
         loadData();
 
-        // Load quote if needed
         if (shouldFetchNewQuote()) {
             fetchRandomQuote();
         } else {
@@ -153,7 +139,6 @@ public class HomeFragment extends Fragment {
         });
 
         btnRefreshQuote.setOnClickListener(v -> {
-            // Add rotation animation
             v.animate().rotation(360f).setDuration(500).start();
             fetchRandomQuote();
         });
@@ -175,28 +160,9 @@ public class HomeFragment extends Fragment {
         }).execute();
     }
 
-    /**
-     * Method untuk refresh habits - dipanggil dari MainActivity
-     * Ini adalah method yang dibutuhkan untuk onActivityResult di MainActivity
-     */
     public void refreshHabits() {
         if (isAdded() && getActivity() != null) {
             loadData();
-        }
-    }
-
-    /**
-     * Method untuk refresh data secara manual (bisa dipanggil dari UI)
-     */
-    public void forceRefresh() {
-        if (isAdded() && getActivity() != null) {
-            // Show loading indicator if needed
-            loadData();
-
-            // Also refresh quote if needed
-            if (shouldFetchNewQuote()) {
-                fetchRandomQuote();
-            }
         }
     }
 
@@ -210,16 +176,12 @@ public class HomeFragment extends Fragment {
             showDefaultQuote();
         }
     }
-
     private boolean shouldFetchNewQuote() {
         long lastFetchTime = sharedPreferences.getLong(KEY_LAST_FETCH_TIME, 0);
         long currentTime = System.currentTimeMillis();
         long timeDifference = currentTime - lastFetchTime;
-
-        // Fetch new quote if last fetch was more than 4 hours ago
         return timeDifference > (4 * 60 * 60 * 1000);
     }
-
     private void fetchRandomQuote() {
         if (!isNetworkAvailable()) {
             if (isAdded()) {
@@ -237,7 +199,7 @@ public class HomeFragment extends Fragment {
         call.enqueue(new Callback<List<Quotes>>() {
             @Override
             public void onResponse(Call<List<Quotes>> call, Response<List<Quotes>> response) {
-                if (isAdded()) { // Check if fragment is still attached
+                if (isAdded()) {
                     showQuoteLoading(false);
 
                     if (response.isSuccessful() && response.body() != null && !response.body().isEmpty()) {
@@ -256,7 +218,7 @@ public class HomeFragment extends Fragment {
 
             @Override
             public void onFailure(Call<List<Quotes>> call, Throwable t) {
-                if (isAdded()) { // Check if fragment is still attached
+                if (isAdded()) {
                     showQuoteLoading(false);
                     Toast.makeText(requireContext(), "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
                     loadCachedQuote();
@@ -264,14 +226,12 @@ public class HomeFragment extends Fragment {
             }
         });
     }
-
     private void displayQuote(String quoteText, String author) {
         if (tvQuote != null && tvAuthor != null && isAdded()) {
             tvQuote.setText("\"" + quoteText + "\"");
             tvAuthor.setText("— " + author);
         }
     }
-
     private void saveQuoteToCache(String quoteText, String author) {
         if (sharedPreferences != null) {
             SharedPreferences.Editor editor = sharedPreferences.edit();
@@ -281,17 +241,14 @@ public class HomeFragment extends Fragment {
             editor.apply();
         }
     }
-
     private void showDefaultQuote() {
         displayQuote("The secret of getting ahead is getting started.", "Mark Twain");
     }
-
     private void showQuoteLoading(boolean show) {
         if (progressBarQuote != null && isAdded()) {
             progressBarQuote.setVisibility(show ? View.VISIBLE : View.GONE);
         }
     }
-
     private boolean isNetworkAvailable() {
         try {
             ConnectivityManager connectivityManager =
@@ -302,6 +259,7 @@ public class HomeFragment extends Fragment {
             return false;
         }
     }
+
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -328,16 +286,13 @@ public class HomeFragment extends Fragment {
             }
         }
     }
-
     @Override
     public void onDestroy() {
         super.onDestroy();
-        // Clean up resources
         if (habitHelper != null) {
             habitHelper.close();
         }
     }
-
     private static class LoadHabitsAsync {
         private final WeakReference<Context> weakContext;
         private final WeakReference<LoadHabitsCallback> weakCallback;

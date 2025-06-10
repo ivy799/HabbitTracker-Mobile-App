@@ -8,7 +8,6 @@ public class ThemeManager {
 
     private static final String PREFS_NAME = "theme_prefs";
     private static final String THEME_KEY = "selected_theme";
-
     public static final int THEME_SYSTEM = 0;
     public static final int THEME_LIGHT = 1;
     public static final int THEME_DARK = 2;

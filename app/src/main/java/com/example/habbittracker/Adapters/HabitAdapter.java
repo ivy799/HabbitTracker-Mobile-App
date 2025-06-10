@@ -34,83 +34,22 @@ import java.util.Locale;
 public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private static final int TYPE_HEADER = 0;
     private static final int TYPE_ITEM = 1;
-
     private final Activity activity;
     private final ArrayList<Object> displayList = new ArrayList<>();
     private ArrayList<Habit> originalHabits = new ArrayList<>();
-
-    // Section titles
+    private OnAllHabitsCompletedListener allHabitsCompletedListener;
     private static final String TITLE_ACTIVE = "Active";
     private static final String TITLE_COMPLETED = "Completed Today";
     private static final String TITLE_INACTIVE = "Inactive";
 
-    // Tambahkan listener untuk event semua habit aktif selesai hari ini
+
     public interface OnAllHabitsCompletedListener {
         void onAllHabitsCompleted();
     }
-    private OnAllHabitsCompletedListener allHabitsCompletedListener;
 
-    public void setOnAllHabitsCompletedListener(OnAllHabitsCompletedListener listener) {
-        this.allHabitsCompletedListener = listener;
-    }
 
     public HabitAdapter(Activity activity) {
         this.activity = activity;
-    }
-
-    public void setListHabits(ArrayList<Habit> habits) {
-        originalHabits = new ArrayList<>(habits);
-
-        ArrayList<Habit> active = new ArrayList<>();
-        ArrayList<Habit> completed = new ArrayList<>();
-        ArrayList<Habit> inactive = new ArrayList<>();
-        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-
-        for (Habit habit : habits) {
-            // Refresh dari database untuk memastikan data terbaru
-            Cursor cursor = HabitHelper.instance.search(habit.getId());
-            if (cursor != null && cursor.moveToFirst()) {
-                int freqIndex = cursor.getColumnIndex("frequency");
-                if (freqIndex >= 0) {
-                    habit.setFrequency(cursor.getString(freqIndex));
-                }
-                cursor.close();
-            }
-            if (!habit.getIs_active()) {
-                inactive.add(habit);
-            } else if (isHabitCompletedForPeriod(habit, today)) {
-                completed.add(habit);
-            } else {
-                active.add(habit);
-            }
-        }
-
-        displayList.clear();
-        if (!active.isEmpty()) {
-            displayList.add(TITLE_ACTIVE);
-            displayList.addAll(active);
-        }
-        if (!completed.isEmpty()) {
-            displayList.add(TITLE_COMPLETED);
-            displayList.addAll(completed);
-        }
-        if (!inactive.isEmpty()) {
-            displayList.add(TITLE_INACTIVE);
-            displayList.addAll(inactive);
-        }
-        notifyDataSetChanged();
-
-        // Cek jika semua habit aktif sudah selesai
-        boolean hasActiveHabit = false;
-        for (Habit h : habits) {
-            if (h.getIs_active()) {
-                hasActiveHabit = true;
-                break;
-            }
-        }
-        if (hasActiveHabit && active.isEmpty() && allHabitsCompletedListener != null) {
-            allHabitsCompletedListener.onAllHabitsCompleted();
-        }
     }
 
     @Override
@@ -145,14 +84,58 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     public int getItemCount() {
         return displayList.size();
     }
+    public void setListHabits(ArrayList<Habit> habits) {
+        originalHabits = new ArrayList<>(habits);
 
-    private void sortHabitsByCompletionStatus() {
-        // Sorting logic is now handled in setListHabits
+        ArrayList<Habit> active = new ArrayList<>();
+        ArrayList<Habit> completed = new ArrayList<>();
+        ArrayList<Habit> inactive = new ArrayList<>();
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+
+        for (Habit habit : habits) {
+            Cursor cursor = HabitHelper.instance.search(habit.getId());
+            if (cursor != null && cursor.moveToFirst()) {
+                int freqIndex = cursor.getColumnIndex("frequency");
+                if (freqIndex >= 0) {
+                    habit.setFrequency(cursor.getString(freqIndex));
+                }
+                cursor.close();
+            }
+            if (!habit.getIs_active()) {
+                inactive.add(habit);
+            } else if (isHabitCompletedForPeriod(habit, today)) {
+                completed.add(habit);
+            } else {
+                active.add(habit);
+            }
+        }
+
+        displayList.clear();
+        if (!active.isEmpty()) {
+            displayList.add(TITLE_ACTIVE);
+            displayList.addAll(active);
+        }
+        if (!completed.isEmpty()) {
+            displayList.add(TITLE_COMPLETED);
+            displayList.addAll(completed);
+        }
+        if (!inactive.isEmpty()) {
+            displayList.add(TITLE_INACTIVE);
+            displayList.addAll(inactive);
+        }
+        notifyDataSetChanged();
+
+        boolean hasActiveHabit = false;
+        for (Habit h : habits) {
+            if (h.getIs_active()) {
+                hasActiveHabit = true;
+                break;
+            }
+        }
+        if (hasActiveHabit && active.isEmpty() && allHabitsCompletedListener != null) {
+            allHabitsCompletedListener.onAllHabitsCompleted();
+        }
     }
-
-    /**
-     * Cek apakah habit sudah completed/skipped untuk periode yang sesuai
-     */
     private boolean isHabitCompletedForPeriod(Habit habit, String today) {
         boolean completedToday = false;
         boolean weeklyCooldownActive = false;
@@ -163,7 +146,7 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             int statusColumnIndex = habitLog.getColumnIndex("status");
             if (statusColumnIndex != -1) {
                 int status = habitLog.getInt(statusColumnIndex);
-                completedToday = (status == 1 || status == 2); // completed or skipped
+                completedToday = (status == 1 || status == 2);
             }
             habitLog.close();
         }
@@ -184,7 +167,7 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                         Date now = sdf.parse(today);
                         long diffMillis = now.getTime() - lastDate.getTime();
                         long diffDays = diffMillis / (1000 * 60 * 60 * 24);
-                        weeklyCooldownActive = diffDays < 7; // still in cooldown
+                        weeklyCooldownActive = diffDays < 7;
                     } catch (Exception e) {
                         weeklyCooldownActive = false;
                     }
@@ -206,7 +189,7 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                         Date now = sdf.parse(today);
                         long diffMillis = now.getTime() - lastDate.getTime();
                         long diffDays = diffMillis / (1000 * 60 * 60 * 24);
-                        monthlyCooldownActive = diffDays < 30; // still in cooldown
+                        monthlyCooldownActive = diffDays < 30;
                     } catch (Exception e) {
                         monthlyCooldownActive = false;
                     }
@@ -218,10 +201,6 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
         return completedToday;
     }
-
-    /**
-     * Method untuk refresh sorting setelah ada perubahan status habit
-     */
     public void refreshSorting() {
         setListHabits(originalHabits);
     }
@@ -238,19 +217,18 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
     }
 
     class HabitViewHolder extends RecyclerView.ViewHolder {
-        final TextView tvHabitName;
-        final TextView tvHabitDescription;
-        final TextView tvHabitCategory;
-        final TextView tvHabitFrequency;
-        final TextView tvHabitStartDate;
-        final TextView tvHabitTarget;
-        final TextView tvHabitCurrent;
-        final TextView tvHabitStatus;
+        final TextView tvHabitName,
+                tvHabitDescription,
+                tvHabitCategory,
+                tvHabitFrequency,
+                tvHabitStartDate,
+                tvHabitTarget,
+                tvHabitCurrent,
+                tvHabitStatus;
         final MaterialButton btnFinishHabit, btnSkipHabit, btnDeactivateHabit, btnEditHabit;
         final ProgressBar progressBar;
         final ImageButton btnToggleDetails;
         final ConstraintLayout detailsSection;
-
         private boolean isExpanded = false;
 
         public HabitViewHolder(@NonNull View itemView) {
@@ -275,12 +253,7 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         }
 
         private void setupDropdownToggle() {
-            btnToggleDetails.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    toggleDetails();
-                }
-            });
+            btnToggleDetails.setOnClickListener(v -> toggleDetails());
         }
 
         private void toggleDetails() {
@@ -317,18 +290,17 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             tvHabitStartDate.setText(formattedDate);
             tvHabitTarget.setText(String.valueOf(habit.getTarget_count()));
             tvHabitCurrent.setText(String.valueOf(habit.getCurrent_count()));
+            int progress = 0;
+            if (habit.getTarget_count() > 0) {
+                progress = (int) ((habit.getCurrent_count() * 100.0f) / habit.getTarget_count());
+            }
+            progressBar.setProgress(progress);
 
             btnEditHabit.setOnClickListener(v -> {
                 Intent intent = new Intent(itemView.getContext(), com.example.habbittracker.Activities.HabitFormActivity.class);
                 intent.putExtra(HabitFormActivity.EXTRA_HABIT, habit);
                 activity.startActivityForResult(intent, HabitFormActivity.REQUEST_UPDATE);
             });
-
-            int progress = 0;
-            if (habit.getTarget_count() > 0) {
-                progress = (int) ((habit.getCurrent_count() * 100.0f) / habit.getTarget_count());
-            }
-            progressBar.setProgress(progress);
 
             String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
             boolean sudahSelesaiHariIni = false;
@@ -346,28 +318,21 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 habitLog.close();
             }
 
-            // --- Tambahan: Ubah warna tombol skip sesuai status selesai/skip ---
             if (sudahSelesaiHariIni) {
                 if (isCompletedToday) {
-                    // Habit selesai (completed)
                     btnFinishHabit.setIconResource(R.drawable.ic_check_circle_done_24);
                     btnSkipHabit.setIconResource(R.drawable.ic_skip_next_24);
-                    // Skip button warna default
                     btnSkipHabit.setBackgroundTintList(itemView.getContext().getResources().getColorStateList(R.color.primary_light));
                 } else {
-                    // Habit di-skip
                     btnFinishHabit.setIconResource(R.drawable.ic_check_24);
                     btnSkipHabit.setIconResource(R.drawable.ic_skip_next_24);
-                    // Ganti warna tombol skip saat skip
                     btnSkipHabit.setBackgroundTintList(itemView.getContext().getResources().getColorStateList(R.color.warning_color));
                 }
             } else {
-                // Belum selesai, icon dan warna default
                 btnFinishHabit.setIconResource(R.drawable.ic_check_24);
                 btnSkipHabit.setIconResource(R.drawable.ic_skip_next_24);
                 btnSkipHabit.setBackgroundTintList(itemView.getContext().getResources().getColorStateList(R.color.primary_light));
             }
-            // --- End tambahan ---
 
             boolean weeklyCooldownPassed = true;
             boolean monthlyCooldownPassed = true;
@@ -455,7 +420,6 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             }
 
             setCardBackground(habit, sudahSelesaiHariIni);
-
             if (habit.getIs_active()) {
                 if (sudahSelesaiHariIni) {
                     tvHabitStatus.setBackgroundResource(R.drawable.habit_status_badge_completed);
@@ -524,8 +488,6 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
                             btnFinishHabit.setEnabled(false);
                             btnSkipHabit.setEnabled(false);
-
-                            // Hanya ubah warna tombol skip, icon tetap
                             btnSkipHabit.setBackgroundTintList(itemView.getContext().getResources().getColorStateList(R.color.warning_color));
 
                             Toast.makeText(itemView.getContext(),
@@ -537,7 +499,6 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                         .setNegativeButton("Cancel", null)
                         .show();
             });
-
             btnDeactivateHabit.setOnClickListener(v -> {
                 boolean isActivating = !habit.getIs_active();
                 showMaterialConfirmationDialog(habit, isActivating);
@@ -556,7 +517,6 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                 itemView.setBackgroundResource(R.drawable.habit_card_active);
             }
         }
-
         private void performHabitToggle(Habit habit, boolean isActivating) {
             ContentValues values = new ContentValues();
 
@@ -588,7 +548,6 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                     "Habit \"" + habit.getName() + "\" has been disabled.";
             Toast.makeText(itemView.getContext(), message, Toast.LENGTH_SHORT).show();
         }
-
         private void showMaterialConfirmationDialog(Habit habit, boolean isActivating) {
             com.google.android.material.dialog.MaterialAlertDialogBuilder builder =
                     new com.google.android.material.dialog.MaterialAlertDialogBuilder(itemView.getContext());
@@ -615,7 +574,6 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                     .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
                     .show();
         }
-
         private void showStreakCompletionDialog(Habit habit) {
             new com.google.android.material.dialog.MaterialAlertDialogBuilder(itemView.getContext())
                     .setTitle("🎉 Streak Completed!")
@@ -633,7 +591,6 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                     })
                     .show();
         }
-
         private void showContinueHabitDialog(Habit habit) {
             View dialogView = LayoutInflater.from(itemView.getContext()).inflate(R.layout.dialog_continue_habit, null);
 
@@ -676,7 +633,6 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                     .setCancelable(false)
                     .show();
         }
-
         private void undoHabitLog(Habit habit, String today) {
             int deletedRows = HabitLogHelper.instance.deleteByHabitIdAndDate(habit.getId(), today);
 
@@ -715,7 +671,6 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             btnFinishHabit.setEnabled(true);
             btnSkipHabit.setEnabled(true);
         }
-
         private void continueHabitWithNewTarget(Habit habit, int newTarget) {
             try {
                 ContentValues values = new ContentValues();
@@ -747,7 +702,6 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                         Toast.LENGTH_SHORT).show();
             }
         }
-
         private void completeAndDeactivateHabit(Habit habit) {
             try {
                 ContentValues values = new ContentValues();
@@ -782,7 +736,6 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                         Toast.LENGTH_SHORT).show();
             }
         }
-
         private void updateHabitProgress(Habit habit, int newCurrentCount) {
             try {
                 ContentValues habitValues = new ContentValues();

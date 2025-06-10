@@ -7,16 +7,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.example.habbittracker.Database_config.Habit.HabitHelper;
 import com.example.habbittracker.Models.HabitLog;
 import com.example.habbittracker.R;
 import com.google.android.material.card.MaterialCardView;
-
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -73,15 +70,11 @@ public class RecentActivityAdapter extends RecyclerView.Adapter<RecentActivityAd
         }
 
         void bind(HabitLog log, Context context) {
-            // Set habit name
             String habitName = getHabitNameById(log.getHabit_id(), context);
             tvHabitName.setText(habitName);
-
-            // Format and set date
             String formattedDate = formatDate(String.valueOf(log.getLog_date()));
             tvDate.setText(formattedDate);
 
-            // Set status with themed colors and icons
             setActivityStatusAndIcon(log.getStatus(), context);
         }
 
@@ -92,28 +85,28 @@ public class RecentActivityAdapter extends RecyclerView.Adapter<RecentActivityAd
             int textColorAttr;
 
             switch (status) {
-                case 1: // Completed
+                case 1:
                     statusText = "Completed";
                     iconRes = R.drawable.ic_check_circle_24;
                     bgColorAttr = com.google.android.material.R.attr.colorSecondary;
                     textColorAttr = com.google.android.material.R.attr.colorOnSecondary;
                     break;
 
-                case 2: // Skipped
+                case 2:
                     statusText = "Skipped";
                     iconRes = R.drawable.ic_help_outline_24;
                     bgColorAttr = com.google.android.material.R.attr.colorTertiary;
                     textColorAttr = com.google.android.material.R.attr.colorOnTertiary;
                     break;
 
-                case 3: // Missed
+                case 3:
                     statusText = "Missed";
                     iconRes = R.drawable.ic_help_outline_24;
                     bgColorAttr = com.google.android.material.R.attr.colorError;
                     textColorAttr = com.google.android.material.R.attr.colorOnError;
                     break;
 
-                default: // Unknown
+                default:
                     statusText = "Unknown";
                     iconRes = R.drawable.ic_help_outline_24;
                     bgColorAttr = com.google.android.material.R.attr.colorSurfaceVariant;
@@ -121,18 +114,13 @@ public class RecentActivityAdapter extends RecyclerView.Adapter<RecentActivityAd
                     break;
             }
 
-            // Set status text
             tvStatus.setText(statusText);
-
-            // Set icon
             ivIcon.setImageResource(iconRes);
 
-            // Get themed colors
             int backgroundColor = getThemeColor(context, bgColorAttr);
             int textColor = getThemeColor(context, textColorAttr);
             int iconColor = getThemeColor(context, com.google.android.material.R.attr.colorOnPrimaryContainer);
 
-            // Apply colors
             statusBadgeContainer.setCardBackgroundColor(backgroundColor);
             tvStatus.setTextColor(textColor);
             ivIcon.setColorFilter(iconColor);
@@ -174,7 +162,6 @@ public class RecentActivityAdapter extends RecyclerView.Adapter<RecentActivityAd
                 SimpleDateFormat outputFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
                 Date date = inputFormat.parse(dateString);
 
-                // Check if date is today
                 SimpleDateFormat todayFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
                 String today = todayFormat.format(new Date());
 
@@ -182,7 +169,6 @@ public class RecentActivityAdapter extends RecyclerView.Adapter<RecentActivityAd
                     return "Today";
                 }
 
-                // Check if date is yesterday
                 Date yesterday = new Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000);
                 String yesterdayStr = todayFormat.format(yesterday);
 
@@ -193,7 +179,7 @@ public class RecentActivityAdapter extends RecyclerView.Adapter<RecentActivityAd
                 return outputFormat.format(date);
             } catch (ParseException e) {
                 e.printStackTrace();
-                return dateString; // Return original if parsing fails
+                return dateString;
             }
         }
     }
