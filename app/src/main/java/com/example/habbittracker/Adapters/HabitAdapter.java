@@ -600,7 +600,6 @@ public class HabitAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
             tvHabitName.setText(habit.getName());
             tvCurrentStreak.setText("Current streak: " + habit.getCurrent_count() + " days completed");
-            etNewTarget.setHint("Enter new target (e.g., 30)");
 
             new com.google.android.material.dialog.MaterialAlertDialogBuilder(itemView.getContext())
                     .setTitle("Set New Target")

@@ -17,6 +17,7 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.animation.ObjectAnimator;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -62,6 +63,7 @@ public class HomeFragment extends Fragment {
     private static final String KEY_LAST_QUOTE_TEXT = "last_quote_text";
     private static final String KEY_LAST_QUOTE_AUTHOR = "last_quote_author";
     private static final String KEY_LAST_FETCH_TIME = "last_fetch_time";
+    private ObjectAnimator refreshAnimator;
 
     public HomeFragment() {
     }
@@ -139,9 +141,27 @@ public class HomeFragment extends Fragment {
         });
 
         btnRefreshQuote.setOnClickListener(v -> {
-            v.animate().rotation(360f).setDuration(500).start();
+            startRefreshAnimation();
+            btnRefreshQuote.setEnabled(false);
             fetchRandomQuote();
         });
+    }
+
+    private void startRefreshAnimation() {
+        if (refreshAnimator != null && refreshAnimator.isRunning()) {
+            refreshAnimator.cancel();
+        }
+        refreshAnimator = ObjectAnimator.ofFloat(btnRefreshQuote, "rotation", 0f, 360f);
+        refreshAnimator.setDuration(800);
+        refreshAnimator.setRepeatCount(ObjectAnimator.INFINITE);
+        refreshAnimator.start();
+    }
+
+    private void stopRefreshAnimation() {
+        if (refreshAnimator != null) {
+            refreshAnimator.cancel();
+            btnRefreshQuote.setRotation(0f);
+        }
     }
 
     private void loadData() {
@@ -187,11 +207,14 @@ public class HomeFragment extends Fragment {
             if (isAdded()) {
                 Toast.makeText(requireContext(), "No internet connection", Toast.LENGTH_SHORT).show();
             }
+            stopRefreshAnimation();
+            btnRefreshQuote.setEnabled(true);
             loadCachedQuote();
             return;
         }
 
         showQuoteLoading(true);
+        btnRefreshQuote.setEnabled(false);
 
         ApiService apiService = RetrofitClient.getQuoteApi();
         Call<List<Quotes>> call = apiService.getRandomQuote();
@@ -201,6 +224,8 @@ public class HomeFragment extends Fragment {
             public void onResponse(Call<List<Quotes>> call, Response<List<Quotes>> response) {
                 if (isAdded()) {
                     showQuoteLoading(false);
+                    stopRefreshAnimation();
+                    btnRefreshQuote.setEnabled(true);
 
                     if (response.isSuccessful() && response.body() != null && !response.body().isEmpty()) {
                         Quotes quote = response.body().get(0);
@@ -220,6 +245,8 @@ public class HomeFragment extends Fragment {
             public void onFailure(Call<List<Quotes>> call, Throwable t) {
                 if (isAdded()) {
                     showQuoteLoading(false);
+                    stopRefreshAnimation();
+                    btnRefreshQuote.setEnabled(true);
                     Toast.makeText(requireContext(), "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
                     loadCachedQuote();
                 }
