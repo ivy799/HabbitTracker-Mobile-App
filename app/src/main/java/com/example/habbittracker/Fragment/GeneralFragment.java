@@ -126,7 +126,6 @@ public class GeneralFragment extends Fragment {
 
         Toast.makeText(getContext(), "Theme applied! Restarting app...", Toast.LENGTH_SHORT).show();
 
-        // Restart activity untuk menerapkan tema secara penuh
         Intent intent = new Intent(getActivity(), MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);

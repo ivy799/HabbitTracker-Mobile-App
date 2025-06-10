@@ -41,10 +41,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Setup bottom navigation (jika diperlukan)
         setupBottomNavigation();
-
-        if (savedInstanceState == null) {
-            loadFragment(new HomeFragment());
-        }
+        loadFragment(new HomeFragment());
     }
 
     private void setupBottomNavigation() {
